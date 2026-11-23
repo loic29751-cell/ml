@@ -113,18 +113,40 @@
       .join(' ');
 
   /* ---------------- Exécution ---------------- */
-  let nextId = 1;
-  const undo = new Map(); // id d'action -> instantané du répertoire avant l'action (session en cours)
-  T.canUndo = (id) => undo.has(id);
-  T.undo = (id) => {
-    const u = undo.get(id);
-    if (!u) return false;
-    R.restore(u.color, u.snap);
-    R.prune(u.color);
+  /* Chaque action garde la différence avant/après (clé de position -> [avant, après]).
+   * Annuler ne touche que ces positions : on peut annuler une action sans défaire les suivantes. */
+  const clone = (o) => JSON.parse(JSON.stringify(o || {}));
+  const uciOf = (e) => (e ? e.uci : null);
+  function diffOf(before, after) {
+    const d = {};
+    for (const k of new Set(Object.keys(before).concat(Object.keys(after)))) {
+      const a = before[k] || null;
+      const b = after[k] || null;
+      if (uciOf(a) !== uciOf(b)) d[k] = [a, b];
+    }
+    return d;
+  }
+  /** dir : 'undo' (revenir à avant) ou 'redo' (réappliquer) ; renvoie le nombre de positions modifiées */
+  T.apply = function (act, dir) {
+    if (!act || !act.diff) return 0;
+    const data = R.data();
+    const d = data[act.color];
+    const from = dir === 'undo' ? 1 : 0;
+    const to = 1 - from;
+    let n = 0;
+    for (const k of Object.keys(act.diff)) {
+      if (uciOf(d[k]) !== uciOf(act.diff[k][from])) continue; // modifié depuis : on n'y touche pas
+      if (act.diff[k][to]) d[k] = act.diff[k][to];
+      else delete d[k];
+      n++;
+    }
+    if (dir === 'undo' && act.srs) for (const ck of Object.keys(act.srs)) if (!data.srs[ck]) data.srs[ck] = act.srs[ck];
+    R.prune(act.color);
     R.save();
-    undo.delete(id);
-    return true;
+    if (n) act.undone = dir === 'undo';
+    return n;
   };
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
   async function finalEval(fen, color, engine) {
     try {
@@ -187,7 +209,7 @@
     if (conflicts.length && !input.replace) {
       return { result: { ok: false, conflits: conflicts, conseil: 'Demande au joueur s’il veut remplacer ces coups, puis rappelle l’outil avec replace=true.' } };
     }
-    const snap = R.snapshot(color);
+    const before = clone(R.data()[color]);
     let added = 0;
     let already = 0;
     let replaced = 0;
@@ -209,8 +231,7 @@
     const ev = ctx && ctx.engine ? await finalEval(last.fenAfter, color, ctx.engine) : null;
     const opening = A.identifyOpening(p.moves.map((m) => m.san)).opening;
     const line = lineText(p.moves);
-    const id = nextId++;
-    if (added) undo.set(id, { color, snap });
+    const diff = diffOf(before, R.data()[color]);
     const result = {
       ok: true,
       couleur: color,
@@ -224,7 +245,9 @@
     if (ev && ev.bad) result.attention = 'La position finale est nettement défavorable au joueur selon Stockfish : vérifie la ligne.';
     return {
       result,
-      action: added ? { id, type: 'add', color, line, name: input.name || (opening && opening.name) || null, added, replaced, eval: ev ? ev.text : null, bad: !!(ev && ev.bad), path: p.moves.map((m) => m.uci) } : null,
+      action: added
+        ? { id: newId(), type: 'add', color, line, name: input.name || (opening && opening.name) || null, added, replaced, eval: ev ? ev.text : null, bad: !!(ev && ev.bad), path: p.moves.map((m) => m.uci), diff }
+        : null,
     };
   }
 
@@ -237,14 +260,16 @@
     if (!target) return { isError: true, result: { ok: false, erreur: 'la ligne ne contient aucun coup du joueur' } };
     const e = R.get(color, target.fenBefore);
     if (!e) return { result: { ok: false, erreur: 'cette position n’a pas de coup dans le répertoire' } };
-    const snap = R.snapshot(color);
+    const before = clone(R.data()[color]);
+    const srsBefore = clone(R.data().srs);
     R.remove(color, target.fenBefore);
-    const id = nextId++;
-    undo.set(id, { color, snap });
+    const diff = diffOf(before, R.data()[color]);
+    const srs = {};
+    for (const ck of Object.keys(srsBefore)) if (!R.data().srs[ck]) srs[ck] = srsBefore[ck];
     const line = lineText(p.moves.slice(0, p.moves.indexOf(target) + 1));
     return {
-      result: { ok: true, retire: `${CC.moveLabel(target.fenBefore, color)} ${e.san} et la suite`, positions_restantes: R.size(color) },
-      action: { id, type: 'remove', color, line, removed: e.san, path: p.moves.slice(0, p.moves.indexOf(target)).map((m) => m.uci) },
+      result: { ok: true, retire: `${CC.moveLabel(target.fenBefore, color)} ${e.san} et la suite (${Object.keys(diff).length} positions)`, positions_restantes: R.size(color) },
+      action: { id: newId(), type: 'remove', color, line, removed: e.san, count: Object.keys(diff).length, path: p.moves.slice(0, p.moves.indexOf(target)).map((m) => m.uci), diff, srs },
     };
   }
 

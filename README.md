@@ -59,6 +59,8 @@ L'onglet **Répertoire** gère tes ouvertures, avec les Blancs et avec les Noirs
 
 L'onglet **Chat** te permet de discuter avec Clawd de ton jeu. Il connaît ton rapport, cadence par cadence, et tu peux lui joindre une partie (« En parler avec Clawd » dans le bilan d'une partie). La conversation reste dans ce navigateur.
 
+Clawd peut aussi **remplir ton répertoire d'ouvertures** : demande-lui par exemple « ajoute une défense solide contre 1.e4 » ou « construis-moi un répertoire Blancs simple pour le blitz ». Il regarde ton répertoire actuel et ton rapport, choisit des lignes adaptées, vérifie chaque coup et fait évaluer la position finale par Stockfish. Chaque modification apparaît dans le chat sous forme de carte avec **Voir** (ouvre la ligne dans le Répertoire) et **Annuler** / **Rétablir**. Il ne remplace jamais un coup déjà dans ton répertoire sans ton accord.
+
 Il faut une clé API Claude ou Gemini (voir plus bas). Sans clé, le bouton **Copier pour claude.ai** copie ton rapport et ouvre claude.ai : il suffit de coller.
 
 ## Vitesse
@@ -108,6 +110,7 @@ js/repertoire-ui.js répertoire : construire, réviser, exercices, partie libre
 js/insights.js      « Mes faiblesses » : statistiques et détection des faiblesses
 js/insights-ui.js   « Mes faiblesses » : analyse en lot, rapport, graphiques
 js/chat.js          le chat privé avec Clawd
+js/chat-tools.js    les outils du chat pour modifier le répertoire
 js/chesscom.js      l'API publique chess.com
 js/app.js           l'application
 js/vendor/          chess.js, Stockfish, base d'ouvertures

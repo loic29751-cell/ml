@@ -35,7 +35,7 @@
   /** Un appel en streaming (SSE). Renvoie { text, parts, model, finish } */
   async function streamOnce(key, model, body, onText) {
     const ctrl = new AbortController();
-    let timer = setTimeout(() => ctrl.abort(), 90000); // pas de réponse en 90 s : on abandonne
+    let timer = setTimeout(() => ctrl.abort(), 40000); // pas de réponse en 40 s : on abandonne (puis modèle de repli)
     let res;
     try {
       res = await fetch(`${BASE}${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`, {
@@ -100,6 +100,19 @@
     return { text, parts, model, finish };
   }
 
+  /** Regroupe les morceaux de texte du flux (sans toucher aux parties signées ni aux appels de fonction) */
+  function mergeParts(parts) {
+    const out = [];
+    for (const p of parts) {
+      if (p.thought) continue;
+      const prev = out[out.length - 1];
+      const plain = (x) => x && typeof x.text === 'string' && Object.keys(x).length === 1;
+      if (plain(p) && plain(prev)) prev.text += p.text;
+      else out.push(Object.assign({}, p));
+    }
+    return out;
+  }
+
   /** Génération avec repli automatique si le modèle est saturé ou indisponible */
   async function generate(opts) {
     const body = {
@@ -107,6 +120,7 @@
       generationConfig: { maxOutputTokens: opts.maxTokens || 8192 },
     };
     if (opts.system) body.systemInstruction = { parts: [{ text: opts.system }] };
+    if (opts.tools) body.tools = opts.tools;
     const chain = [opts.model].concat(FALLBACK).filter((m, i, a) => m && a.indexOf(m) === i);
     let last = null;
     for (const model of chain) {
@@ -116,12 +130,14 @@
           emitted = true;
           opts.onText(d);
         });
-        if (!r.text) throw new GeminiError(200, 'Réponse vide de Gemini.', 'EMPTY');
+        r.calls = r.parts.filter((p) => p.functionCall).map((p) => p.functionCall);
+        r.parts = mergeParts(r.parts);
+        if (!r.text && !r.calls.length) throw new GeminiError(200, 'Réponse vide de Gemini.', 'EMPTY');
         return r;
       } catch (e) {
         last = e;
         // on ne réessaie que les erreurs « temporaires » et seulement si rien n'a encore été affiché
-        if (emitted || !(e.status === 503 || e.status === 429 || e.status === 404 || e.status === 500 || e.code === 'EMPTY')) throw e;
+        if (emitted || !(e.status === 503 || e.status === 429 || e.status === 404 || e.status === 500 || e.code === 'EMPTY' || e.code === 'NETWORK')) throw e;
       }
     }
     throw last;

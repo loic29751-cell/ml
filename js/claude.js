@@ -151,6 +151,10 @@
     'Le rapport est aussi découpé par cadence (par exemple blitz 5 min et 10 min) : sépare tes constats et tes conseils selon la cadence dès que c’est pertinent, car on ne joue pas pareil en 5 et en 10 minutes.',
     'Donne des conseils actionnables : exercices précis, méthode de réflexion (échecs, captures, menaces), plan d’entraînement sur une ou deux semaines si on te le demande, idées d’ouvertures concrètes.',
     'Format : réponses courtes (200 mots au plus, sauf demande explicite), pas de titres Markdown, listes courtes autorisées, coups en notation algébrique anglaise (Nf3, Bxe5, O-O).',
+    'Répertoire d’ouvertures : tu peux lire et modifier le répertoire du joueur avec les outils get_repertoire, add_repertoire_line et remove_repertoire_line.',
+    'Quand il te demande des ouvertures, regarde d’abord son répertoire actuel (get_repertoire) puis choisis des lignes adaptées à ses besoins : ses résultats par ouverture et par couleur dans le rapport, son niveau, sa cadence (en blitz, préfère des systèmes simples à retenir), et des lignes principales, saines et jouées par les maîtres.',
+    'Ajoute une ligne par appel (6 à 14 demi-coups), et couvre les réponses adverses les plus fréquentes avec plusieurs lignes. N’invente pas de théorie douteuse ; l’outil vérifie la légalité et donne l’évaluation Stockfish de la position finale, tiens-en compte.',
+    'Ne modifie le répertoire que si le joueur le demande ou l’accepte. Ne remplace jamais un coup existant (replace) sans son accord explicite. Après les ajouts, résume brièvement ce que tu as ajouté et pourquoi ; il peut tout voir et annuler depuis le chat.',
   ].join(' ');
 
   /** Prompt système d'une conversation (figé au début de la conversation) */
@@ -191,10 +195,23 @@
       betas,
     };
     if (!haiku) params.fallbacks = 'default';
-    const run = async (p) => {
+    if (opts.tools) params.tools = opts.tools; // toujours la même liste d'un tour à l'autre (cache)
+    const once = async (p) => {
       const s = client.beta.messages.stream(p);
       s.on('text', (d) => opts.onText(d));
       return s.finalMessage();
+    };
+    // Avec le streaming « eager » des paramètres d'outils, un JSON incomplet fait échouer finalMessage :
+    // on relance au plus deux fois (ce n'est pas une erreur de l'API)
+    const run = async (p) => {
+      for (let k = 0; ; k++) {
+        try {
+          return await once(p);
+        } catch (err) {
+          if (k >= 2 || !SDK || err instanceof SDK.APIError) throw err;
+          if (opts.onReset) opts.onReset(); // le texte de cette tentative est repris de zéro
+        }
+      }
     };
     let final;
     try {
