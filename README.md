@@ -45,11 +45,22 @@ L'onglet **Faiblesses** analyse toutes tes parties d'une période (ce mois-ci, l
 
 Seules les nouvelles parties sont analysées : relance le bouton de temps en temps, les mois précédents restent en mémoire pour suivre ta progression (flèches ▲▼ comparées au mois d'avant).
 
+## Puzzles
+
+L'onglet **Puzzles** propose des puzzles de la base publique lichess (sans compte) :
+
+- **Pour toi** enchaîne les thèmes qui collent à tes faiblesses (pièces en prise en priorité, fourchettes, mats en 1 et 2, clouages, coups de défense…). Tu peux aussi choisir un thème précis.
+- **Facile / Moyen / Difficile** règle le niveau des puzzles.
+- Joue le coup sur l'échiquier : l'adversaire répond tout seul jusqu'à la fin de la combinaison. **Indice** montre la pièce à jouer, **Solution** joue la suite.
+- Ton **niveau puzzles**, tes réussites et ta meilleure série sont gardés dans ce navigateur.
+- **Mes erreurs** te fait rejouer les positions de tes propres parties où tu t'es trompé (il faut d'abord les analyser dans « Faiblesses »).
+
 ## Répertoire d'ouvertures (façon Chessbook)
 
 L'onglet **Répertoire** gère tes ouvertures, avec les Blancs et avec les Noirs :
 
 - **Construire** : joue tes coups sur l'échiquier. Pour chaque position tu vois les coups des maîtres (base lichess, % et résultats), l'évaluation Stockfish (★ = meilleur coup) et ce que tu joues dans tes parties. Les transpositions sont reconnues.
+- **Répertoire conseillé** : un répertoire Noirs tout prêt et vérifié par Stockfish, 1…e5 contre 1.e4 (Italienne, Espagnole, Écossaise, 2.d4 exd4, dame sortie tôt avec Qh5 ou Qf3) et 1…d5 contre le reste. Il est ajouté automatiquement si ton répertoire Noirs est vide (bouton « Annuler » pour le retirer), et reste disponible en un clic.
 - **Créer depuis mes parties** : Clawd reprend tes coups habituels des 3 derniers mois, les fait vérifier par Stockfish et remplace ceux qui sont douteux (bouton « Annuler » si ça ne te plaît pas).
 - **Réviser** : je joue les coups adverses, tu retrouves les tiens. Répétition espacée : un coup bien su revient dans 1, 3, 7, 16 jours…, un coup oublié revient tout de suite.
 - **Exercices** : tes propres erreurs en séries (pires erreurs, par faiblesse, par phase). Une fois le bon coup trouvé, **« Continuer la partie »** te laisse jouer la suite contre Stockfish.
@@ -90,7 +101,7 @@ Sans clé, tout le reste fonctionne : les commentaires de Clawd sont générés 
 ## Confidentialité
 
 Tout tourne dans ton navigateur. L'appli contacte uniquement :
-`api.chess.com` (tes parties, API publique), `explorer.lichess.ovh` (statistiques des maîtres pour le répertoire, seule la position est envoyée), Google Fonts (polices), et seulement si tu actives le coach IA : `generativelanguage.googleapis.com` (Gemini) ou `cdn.jsdelivr.net` + `api.anthropic.com` (Claude).
+`api.chess.com` (tes parties, API publique), `explorer.lichess.ovh` (statistiques des maîtres pour le répertoire, seule la position est envoyée), `lichess.org` (puzzles), Google Fonts (polices), et seulement si tu actives le coach IA : `generativelanguage.googleapis.com` (Gemini) ou `cdn.jsdelivr.net` + `api.anthropic.com` (Claude).
 
 ## Fichiers
 
@@ -111,6 +122,8 @@ js/insights.js      « Mes faiblesses » : statistiques et détection des faible
 js/insights-ui.js   « Mes faiblesses » : analyse en lot, rapport, graphiques
 js/chat.js          le chat privé avec Clawd
 js/chat-tools.js    les outils du chat pour modifier le répertoire
+js/puzzles.js       les puzzles (lichess) et ta progression
+js/rep-presets.js   les répertoires tout prêts
 js/chesscom.js      l'API publique chess.com
 js/app.js           l'application
 js/vendor/          chess.js, Stockfish, base d'ouvertures

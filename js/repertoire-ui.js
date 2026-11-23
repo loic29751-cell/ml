@@ -203,7 +203,7 @@
     html += '<div class="rep-cands" id="rep-cands"><p class="muted small"><span class="cc-spin">✻</span> Je cherche les coups possibles…</p></div>';
     setBody(
       html,
-      `<button class="btn btn-sm btn-primary" data-auto>✻ Créer depuis mes parties</button>${RP.undo && RP.undo.color === color ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : ''}`
+      `<button class="btn btn-sm btn-primary" data-auto>✻ Créer depuis mes parties</button>${presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Répertoire conseillé</button>' : ''}${RP.undo && RP.undo.color === color ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : ''}`
     );
     mood(mine && !rep ? 'thinking' : 'idle', 'bob');
     loadPositionData(fen, mine);
@@ -424,6 +424,22 @@
       RP.busy = false;
       renderTab();
     }
+  }
+
+  /* ---------------- Répertoires tout prêts ---------------- */
+  const presetFor = (color) => (CC.RepPresets || []).find((p) => p.color === color) || null;
+  function addPreset() {
+    const pre = presetFor(RP.color);
+    if (!pre) return;
+    const snap = R.snapshot(pre.color);
+    const r = R.addPreset(pre);
+    if (!r.added) {
+      app.toast('Ce répertoire est déjà dans le tien (ou en conflit avec tes coups).');
+      return;
+    }
+    RP.undo = { color: pre.color, snap };
+    app.toast(`Ajouté : ${CC.esc(pre.name)}, ${r.added} coups${r.skipped ? ` (${r.skipped} lignes ignorées car tu y joues autre chose)` : ''}. <button class="linkbtn" data-undo>Annuler</button>`);
+    renderTab();
   }
 
   function undo() {
@@ -927,6 +943,18 @@
   const UI = (CC.RepUI = {});
   UI.init = function (a) {
     app = a;
+    // Une seule fois : si le répertoire d'une couleur est vide, on y met le répertoire conseillé (annulable)
+    if (CC.RepPresets && !CC.store.get('cc.preset.auto', false)) {
+      CC.store.set('cc.preset.auto', true);
+      for (const pre of CC.RepPresets) {
+        if (R.size(pre.color) > 0) continue;
+        const snap = R.snapshot(pre.color);
+        if (R.addPreset(pre).added) {
+          RP.undo = { color: pre.color, snap };
+          RP.presetNote = pre;
+        }
+      }
+    }
     board = new CC.Board($('#rep-board'), { orientation: RP.color });
     board.onUserMove = (from, to, promo) => {
       if (RP.tab === 'review' && RP.drill) reviewMove(from, to, promo);
@@ -999,6 +1027,7 @@
         return;
       }
       if (t.closest('[data-auto]')) return autoBuild();
+      if (t.closest('[data-preset]')) return addPreset();
       if (t.closest('[data-undo]')) return undo();
       if (t.closest('[data-hide-report]')) {
         RP.buildReport = null;
@@ -1048,6 +1077,14 @@
     });
   };
   UI.show = function () {
+    if (RP.presetNote) {
+      const pre = RP.presetNote;
+      RP.presetNote = null;
+      RP.color = pre.color;
+      RP.path = [];
+      RP.tab = 'build';
+      setTimeout(() => app.toast(`J’ai ajouté le répertoire conseillé « ${CC.esc(pre.name)} ». <button class="linkbtn" data-undo>Annuler</button>`), 300);
+    }
     renderTabs();
   };
   UI.startExercises = startExercises;

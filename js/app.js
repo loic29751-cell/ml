@@ -295,6 +295,7 @@
     if (name === 'insights' && CC.InsightsUI) CC.InsightsUI.show();
     if (name === 'chat' && CC.ChatUI) CC.ChatUI.show();
     if (name === 'rep' && CC.RepUI) CC.RepUI.show();
+    if (name === 'puzzles' && CC.PuzzleUI) CC.PuzzleUI.show();
   }
   function hero(html, mood, anim) {
     $('#hero-bubble').innerHTML = html;
@@ -1801,7 +1802,7 @@
       b.addEventListener('click', () => {
         const n = b.dataset.nav;
         if (n === 'settings') openSettings();
-        else if (n === 'insights' || n === 'chat' || n === 'rep') showView(n);
+        else if (n === 'insights' || n === 'chat' || n === 'rep' || n === 'puzzles') showView(n);
         else if (n === 'review' && S.game) {
           showView('review');
           if (!S.review && S.mode !== 'loading') runAnalysis();
@@ -2221,6 +2222,7 @@
     };
     if (CC.InsightsUI) CC.InsightsUI.init(CC.App);
     if (CC.ChatUI) CC.ChatUI.init(CC.App);
+    if (CC.PuzzleUI) CC.PuzzleUI.init(CC.App);
     if (CC.RepUI) {
       CC.RepUI.init(CC.App);
       applyBoardTheme();

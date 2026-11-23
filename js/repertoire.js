@@ -205,6 +205,45 @@
     return { ok: true, added: todo.length + 1 };
   };
 
+  /** Ajoute un répertoire tout prêt (CC.RepPresets) sans toucher aux coups déjà choisis : une ligne en conflit est ignorée */
+  R.addPreset = function (pre) {
+    const d = R.data()[pre.color];
+    let added = 0;
+    let skipped = 0;
+    for (const line of pre.lines) {
+      const ch = new Chess();
+      const todo = [];
+      let ok = true;
+      for (const san of line.split(' ')) {
+        const fb = ch.fen();
+        const mv = ch.move(san);
+        if (!mv) {
+          ok = false;
+          break;
+        }
+        if (mv.color !== pre.color) continue;
+        const k = R.fenKey(fb);
+        const uci = mv.from + mv.to + (mv.promotion || '');
+        if (d[k] && d[k].uci !== uci) {
+          ok = false;
+          break;
+        }
+        if (!d[k]) todo.push({ k, uci, san: mv.san });
+      }
+      if (!ok) {
+        skipped++;
+        continue;
+      }
+      for (const x of todo) {
+        if (d[x.k]) continue;
+        d[x.k] = { uci: x.uci, san: x.san, t: Date.now(), src: 'conseillé' };
+        added++;
+      }
+    }
+    R.save();
+    return { added, skipped };
+  };
+
   /** Répertoire proposé à partir de tes coups habituels : [{ fen, key, uci, san, n, total, pts, sans }] */
   R.proposeFromStats = function (color, stats, opts) {
     const minN = (opts && opts.minN) || 2;
