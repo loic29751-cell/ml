@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#262522">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Clawd Coach</title>
+  <meta name="description" content="Bilan de tes parties chess.com : Stockfish analyse chaque coup, Clawd t'explique tes bons et mauvais coups.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Nunito+Sans:opsz,wght@6..12,500;6..12,700;6..12,800;6..12,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-view="home">
+<div class="app">
+  <!-- Barre latérale (style chess.com) -->
+  <aside class="sidebar">
+    <a class="brand" id="brand" href="#" title="Accueil">
+      <span class="brand-clawd" id="brand-clawd"></span>
+      <span class="brand-text"><b>Clawd</b>Coach</span>
+    </a>
+    <nav class="nav">
+      <button class="nav-item active" data-nav="home">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="6.4" r="3.3" fill="currentColor"/><path d="M9.2 10.6h5.6l-1 5.4h-3.6z" fill="currentColor"/><path d="M6.6 20.8c0-2.6 2.4-4.2 5.4-4.2s5.4 1.6 5.4 4.2z" fill="currentColor"/></svg>
+        <span>Mes parties</span>
+      </button>
+      <button class="nav-item" data-nav="review" disabled>
+        <svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.9 6.3.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20.1l1.4-6.3L3 9.5l6.3-.6z" fill="currentColor"/></svg>
+        <span>Bilan</span>
+      </button>
+      <button class="nav-item" data-nav="insights">
+        <svg viewBox="0 0 24 24"><path d="M5 20V12M11 20V5M17 20v-9M3 20.5h18" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>
+        <span>Faiblesses</span>
+      </button>
+      <button class="nav-item" data-nav="rep">
+        <svg viewBox="0 0 24 24"><path d="M5 4.5h5.5a2 2 0 0 1 1.5.7 2 2 0 0 1 1.5-.7H19v14h-5.5a2 2 0 0 0-1.5.7 2 2 0 0 0-1.5-.7H5z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 5.5v13.5" stroke="currentColor" stroke-width="2"/></svg>
+        <span>Répertoire</span>
+      </button>
+      <button class="nav-item" data-nav="chat">
+        <svg viewBox="0 0 24 24"><path d="M5 4.5h14a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-7.5L7 20.5V17H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2z" fill="currentColor"/></svg>
+        <span>Chat</span>
+      </button>
+      <button class="nav-item" data-nav="settings">
+        <svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.3 2.5a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.8 1.7 1l.3 2.5h4l.3-2.5c.6-.2 1.2-.6 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" fill="currentColor" transform="translate(-1 0)"/></svg>
+        <span>Réglages</span>
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="engine-status" id="engine-status" data-state="loading"><span class="dot"></span><span class="es-label">Stockfish se réveille…</span></div>
+      <div class="made-with"><span class="ai-star">✻</span> Fait avec Claude Code</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- ===================== ACCUEIL ===================== -->
+    <section class="view view-home" id="view-home">
+      <div class="home-wrap">
+        <div class="hero card">
+          <div class="hero-mascot">
+            <div class="bubble bubble-hero" id="hero-bubble">Salut ! Moi c’est <b>Clawd</b>. Donne-moi ton pseudo chess.com et je repasse tes parties coup par coup : tes coups brillants… et tes gaffes 😉</div>
+            <div class="clawd-xl" id="hero-clawd"></div>
+          </div>
+          <div class="hero-form">
+            <h1><span class="h1-star">✻</span> Bilan de partie</h1>
+            <p class="sub">Tes parties chess.com analysées par Stockfish, expliquées par Clawd. Gratuit, sans compte, directement dans ton navigateur.</p>
+            <div class="tabs" role="tablist">
+              <button class="tab active" data-tab="user" type="button">Pseudo chess.com</button>
+              <button class="tab" data-tab="link" type="button">Lien d’une partie</button>
+              <button class="tab" data-tab="pgn" type="button">PGN</button>
+            </div>
+            <form class="tab-pane active" data-pane="user" id="form-user" autocomplete="off">
+              <label class="input-row">
+                <img src="assets/pieces/wP.svg" alt="" class="input-icon">
+                <input id="in-user" placeholder="Ton pseudo chess.com" spellcheck="false" autocapitalize="off">
+              </label>
+              <button class="btn btn-primary btn-xl" type="submit">Charger mes parties</button>
+            </form>
+            <form class="tab-pane" data-pane="link" id="form-link" autocomplete="off">
+              <label class="input-row">
+                <span class="input-icon txt">🔗</span>
+                <input id="in-link" placeholder="https://www.chess.com/game/live/…" spellcheck="false">
+              </label>
+              <label class="input-row">
+                <img src="assets/pieces/bP.svg" alt="" class="input-icon">
+                <input id="in-link-user" placeholder="Pseudo d’un des joueurs" spellcheck="false" autocapitalize="off">
+              </label>
+              <button class="btn btn-primary btn-xl" type="submit">Analyser cette partie</button>
+            </form>
+            <form class="tab-pane" data-pane="pgn" id="form-pgn" autocomplete="off">
+              <textarea id="in-pgn" spellcheck="false" placeholder="Colle le PGN ici&#10;(sur chess.com : Partager → PGN → Copier)"></textarea>
+              <div class="pgn-opts">
+                <label for="in-pgn-color">Je joue les</label>
+                <select id="in-pgn-color">
+                  <option value="auto">Auto</option>
+                  <option value="w">Blancs</option>
+                  <option value="b">Noirs</option>
+                </select>
+              </div>
+              <button class="btn btn-primary btn-xl" type="submit">Analyser le PGN</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="profile card" id="profile" hidden></div>
+
+        <div class="games card" id="games-card" hidden>
+          <div class="card-head">
+            <h2>Parties récentes</h2>
+            <div class="filters">
+              <button class="filter active" data-filter="all">Toutes</button>
+              <button class="filter" data-filter="bullet">Bullet</button>
+              <button class="filter" data-filter="blitz">Blitz</button>
+              <button class="filter" data-filter="rapid">Rapide</button>
+              <button class="filter" data-filter="daily">Daily</button>
+            </div>
+            <button class="btn btn-primary" id="btn-last">Analyser la dernière</button>
+          </div>
+          <div class="games-table" id="games-list"></div>
+          <div class="games-more"><button class="btn" id="btn-more" hidden>Charger plus de parties</button></div>
+        </div>
+
+        <div class="how card">
+          <div class="how-item"><span class="how-n">1</span><div><b>Ton pseudo</b><p>Clawd récupère tes parties via l’API publique de chess.com.</p></div></div>
+          <div class="how-item"><span class="how-n">2</span><div><b>Stockfish analyse</b><p>Chaque position est évaluée dans ton navigateur, rien n’est envoyé ailleurs.</p></div></div>
+          <div class="how-item"><span class="how-n">3</span><div><b>Le bilan</b><p>Brillant, gaffe, occasion manquée… et tu peux <i>réessayer</i> tes erreurs.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== BILAN ===================== -->
+    <section class="view view-review" id="view-review" hidden>
+      <div class="review">
+        <div class="board-col">
+          <div class="pstrip" id="pstrip-top"></div>
+          <div class="board-area">
+            <div class="evalbar" id="evalbar"><div class="evalbar-fill"></div><span class="evalbar-label"></span></div>
+            <div id="board"></div>
+          </div>
+          <div class="pstrip" id="pstrip-bottom"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.9 6.3.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20.1l1.4-6.3L3 9.5l6.3-.6z" fill="currentColor"/></svg>
+              Bilan de partie
+            </div>
+            <div class="panel-tools">
+              <button class="icon-btn" id="btn-flip" title="Retourner l’échiquier (F)" aria-label="Retourner l’échiquier">
+                <svg viewBox="0 0 24 24"><path d="M7 4v13M7 17l-3-3M7 17l3-3M17 20V7M17 7l-3 3M17 7l3 3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button class="icon-btn" id="btn-settings2" title="Réglages" aria-label="Réglages">
+                <svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.3 2.5a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.8 1.7 1l.3 2.5h4l.3-2.5c.6-.2 1.2-.6 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" fill="currentColor" transform="translate(-1 0)"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="coach">
+              <div class="coach-avatar" id="coach-clawd"></div>
+              <div class="bubble bubble-coach" id="coach-bubble"></div>
+            </div>
+            <div class="coach-actions" id="coach-actions"></div>
+            <div class="graph" id="graph" title="Clique pour aller à ce coup"></div>
+            <div class="summary" id="summary" hidden></div>
+            <div class="movelist" id="movelist" hidden></div>
+          </div>
+          <div class="panel-foot" id="panel-foot"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== MES FAIBLESSES ===================== -->
+    <section class="view view-insights" id="view-insights" hidden>
+      <div class="ins-wrap">
+        <div class="card ins-top">
+          <div class="ins-coach">
+            <div class="clawd-md" id="ins-clawd"></div>
+            <div class="bubble bubble-left" id="ins-bubble"></div>
+          </div>
+          <div class="ins-controls">
+            <h1><span class="h1-star">✻</span> Mes faiblesses</h1>
+            <div class="filter-row">
+              <div class="seg" id="ins-period" role="group" aria-label="Période">
+                <button class="seg-btn active" data-v="month">Ce mois-ci</button>
+                <button class="seg-btn" data-v="last">Mois dernier</button>
+                <button class="seg-btn" data-v="3m">3 derniers mois</button>
+              </div>
+              <select id="ins-depth" aria-label="Précision de l’analyse">
+                <option value="fast">Analyse rapide</option>
+                <option value="normal">Analyse normale</option>
+              </select>
+            </div>
+            <div class="tc-row"><span class="tc-label">Cadence</span><div class="seg seg-wrap" id="ins-tc" role="group" aria-label="Cadence"></div></div>
+            <div class="run-row">
+              <button class="btn btn-primary" id="ins-run">Analyser mes parties</button>
+              <span class="ins-status" id="ins-status"></span>
+            </div>
+            <div class="ins-progress" id="ins-progress" hidden>
+              <div class="cc-term">
+                <div class="cc-term-line"><span class="cc-spin">✻</span> <span class="cc-verb" id="ins-verb">Décortique…</span> <span class="cc-meta" id="ins-meta"></span></div>
+                <div class="progress"><div class="progress-fill" id="ins-bar"></div></div>
+              </div>
+              <button class="btn btn-sm" id="ins-stop">Arrêter</button>
+            </div>
+          </div>
+        </div>
+        <div id="ins-body"></div>
+      </div>
+      <div class="ins-tip" id="ins-tip" hidden></div>
+    </section>
+
+    <!-- ===================== RÉPERTOIRE ===================== -->
+    <section class="view view-rep" id="view-rep" hidden>
+      <div class="review rep">
+        <div class="board-col">
+          <div class="rep-line" id="rep-line"></div>
+          <div class="board-area">
+            <div class="evalbar" id="rep-evalbar"><div class="evalbar-fill"></div><span class="evalbar-label"></span></div>
+            <div id="rep-board"></div>
+          </div>
+          <div class="rep-nav" id="rep-nav">
+            <button class="btn btn-sm" data-nav="start" title="Début (↑)">⏮ Début</button>
+            <button class="btn btn-sm" data-nav="back" title="Coup précédent (←)">◀ Retour</button>
+            <button class="btn btn-sm" data-nav="flip" title="Retourner l’échiquier">⇅ Retourner</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><span class="rep-clawd" id="rep-clawd"></span>Répertoire</div>
+            <div class="seg" id="rep-color" role="group" aria-label="Couleur">
+              <button class="seg-btn" data-v="w">Blancs</button>
+              <button class="seg-btn" data-v="b">Noirs</button>
+            </div>
+          </div>
+          <div class="rep-tabs">
+            <div class="seg seg-full" id="rep-tabs" role="tablist">
+              <button class="seg-btn" data-tab="build">Construire</button>
+              <button class="seg-btn" data-tab="review">Réviser</button>
+              <button class="seg-btn" data-tab="ex">Exercices</button>
+              <button class="seg-btn" data-tab="games">Mes parties</button>
+            </div>
+          </div>
+          <div class="panel-body" id="rep-body"></div>
+          <div class="panel-foot rep-foot" id="rep-foot"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CHAT ===================== -->
+    <section class="view view-chat" id="view-chat" hidden>
+      <div class="chat-wrap">
+        <div class="card chat">
+          <div class="chat-head">
+            <div class="chat-title">
+              <span class="chat-clawd" id="chat-clawd"></span>
+              <div><b>Chat avec Clawd</b><div class="chat-sub">🔒 Privé · <span id="chat-model"></span> · gardé dans ce navigateur</div></div>
+            </div>
+            <div class="chat-tools">
+              <button class="btn btn-sm btn-ghost" id="chat-export" title="Copier ton rapport pour le coller dans claude.ai">Copier pour claude.ai</button>
+              <button class="btn btn-sm" id="chat-new">Nouvelle conversation</button>
+            </div>
+          </div>
+          <div class="chat-stale" id="chat-stale" hidden>De nouvelles parties ont été analysées (<span id="chat-stale-n"></span> au total). <button class="linkbtn" data-refresh>Nouvelle conversation</button> pour que Clawd en tienne compte.</div>
+          <div class="chat-log" id="chat-log"></div>
+          <div class="chat-suggest" id="chat-suggest"></div>
+          <form class="chat-form" id="chat-form">
+            <textarea id="chat-input" rows="1" placeholder="Pose ta question à Clawd… (Entrée pour envoyer, Maj + Entrée pour aller à la ligne)"></textarea>
+            <button class="btn btn-primary" type="submit" id="chat-send">Envoyer</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ===================== RÉGLAGES ===================== -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <h3 id="modal-title">Réglages</h3>
+      <button class="icon-btn" data-close aria-label="Fermer">✕</button>
+    </div>
+    <div class="modal-body">
+      <section>
+        <h4>Analyse</h4>
+        <div class="pills">
+          <label class="pill"><input type="radio" name="depth" value="fast"><span>Rapide<small>prof. 11</small></span></label>
+          <label class="pill"><input type="radio" name="depth" value="normal"><span>Normale<small>prof. 14</small></span></label>
+          <label class="pill"><input type="radio" name="depth" value="deep"><span>Profonde<small>prof. 18</small></span></label>
+        </div>
+        <p class="hint">Plus c’est profond, plus c’est précis… et plus c’est long.</p>
+        <label class="field"><span>Moteurs Stockfish en parallèle</span>
+          <select id="set-threads">
+            <option value="auto">Automatique</option>
+            <option value="1">1 (économe)</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="12">12 (maximum)</option>
+          </select>
+        </label>
+        <p class="hint">Chaque moteur analyse un morceau de la partie en même temps : sur ton processeur, c’est 5 à 8 fois plus rapide.</p>
+      </section>
+      <section>
+        <h4>Échiquier</h4>
+        <div class="swatches">
+          <button class="swatch" data-theme="claude" title="Claude"><i style="--a:#EEDCC0;--b:#C47F5F"></i><span>Claude</span></button>
+          <button class="swatch" data-theme="kraft" title="Kraft"><i style="--a:#F0E2CA;--b:#B58863"></i><span>Kraft</span></button>
+          <button class="swatch" data-theme="green" title="Vert"><i style="--a:#EBECD0;--b:#779556"></i><span>Vert</span></button>
+          <button class="swatch" data-theme="slate" title="Ardoise"><i style="--a:#DEE3E6;--b:#8CA2AD"></i><span>Ardoise</span></button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="set-arrows"><span class="tg"></span>Flèche du meilleur coup</label>
+        <label class="toggle"><input type="checkbox" id="set-sound"><span class="tg"></span>Sons des coups</label>
+      </section>
+      <section id="set-ai">
+        <h4><span class="ai-star">✻</span> Coach IA <span class="opt">optionnel</span></h4>
+        <p class="hint">Le bouton « Pourquoi ? », le bilan détaillé et le chat demandent à une IA une vraie explication, appuyée sur l’analyse Stockfish. Ta clé reste dans ce navigateur et n’est envoyée qu’au fournisseur choisi.</p>
+        <div class="pills" id="set-provider">
+          <label class="pill"><input type="radio" name="provider" value="claude"><span>Claude<small>Anthropic</small></span></label>
+          <label class="pill"><input type="radio" name="provider" value="gemini"><span>Gemini<small>Google</small></span></label>
+        </div>
+        <div class="prov" data-prov="claude">
+          <label class="field"><span>Clé API Anthropic</span><input type="password" id="set-key" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"></label>
+          <label class="field"><span>Modèle</span>
+            <select id="set-model">
+              <option value="claude-opus-5-5">Claude Opus 5.5 : le plus fin (par défaut)</option>
+              <option value="claude-sonnet-5-5">Claude Sonnet 5.5 : plus rapide</option>
+              <option value="claude-haiku-5-5">Claude Haiku 5.5 : économique</option>
+            </select>
+          </label>
+        </div>
+        <div class="prov" data-prov="gemini" hidden>
+          <label class="field"><span>Clé API Gemini (Google AI Studio)</span><input type="password" id="set-gkey" placeholder="AIza… ou AQ.…" autocomplete="off" spellcheck="false"></label>
+          <label class="field"><span>Modèle</span>
+            <select id="set-gmodel">
+              <option value="gemini-3.5-flash">Gemini 3.5 Flash : fiable (par défaut)</option>
+              <option value="gemini-3.8-flash">Gemini 3.8 Flash : le plus récent (parfois saturé)</option>
+              <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+              <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite : le plus rapide</option>
+            </select>
+          </label>
+          <p class="hint">Si le modèle choisi est saturé, Clawd bascule tout seul sur Gemini 3.5 Flash.</p>
+        </div>
+        <div class="key-actions">
+          <button class="btn btn-sm" id="btn-test-key">Tester la clé</button>
+          <button class="btn btn-sm btn-ghost" id="btn-forget-key">Oublier la clé</button>
+          <span class="key-status" id="key-status"></span>
+        </div>
+      </section>
+      <section>
+        <h4>Données</h4>
+        <button class="btn btn-sm" id="btn-clear-cache">Vider le cache des analyses</button>
+        <p class="hint">Les analyses sont gardées dans ce navigateur pour rouvrir une partie instantanément.</p>
+      </section>
+      <p class="credits">Moteur : Stockfish 10 (GPLv3) · Pièces : cburnett (CC BY-SA 3.0) · Ouvertures : lichess chess-openings (CC0) · Données : API publique chess.com. Clawd Coach n’est pas affilié à chess.com ni à Anthropic.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="js/vendor/chess.js"></script>
+<script src="js/vendor/openings-data.js"></script>
+<script src="js/common.js"></script>
+<script src="js/clawd.js"></script>
+<script src="js/board.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/chesscom.js"></script>
+<script src="js/analysis.js"></script>
+<script src="js/coach.js"></script>
+<script src="js/claude.js"></script>
+<script src="js/gemini.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/repertoire.js"></script>
+<script src="js/repertoire-ui.js"></script>
+<script src="js/insights.js"></script>
+<script src="js/insights-ui.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
