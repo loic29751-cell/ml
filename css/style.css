@@ -806,3 +806,95 @@ select { background: var(--bg-deep); border: 1px solid var(--line); border-radiu
 .task .linkbtn { font-size: 12.5px; white-space: nowrap; }
 .toast.show { pointer-events: auto; }
 .toast .linkbtn { color: var(--accent); text-decoration: underline; margin-left: 6px; }
+
+/* =====================================================================
+   Téléphone : appli plein écran (barre d'onglets en bas, échiquier toujours visible)
+   ===================================================================== */
+@media (max-width: 700px) {
+  :root { --tabbar: calc(60px + env(safe-area-inset-bottom, 0px)); }
+  html, body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
+  .app { flex-direction: column; min-height: 100dvh; }
+  .main { padding-bottom: var(--tabbar); }
+
+  /* Barre d'onglets en bas, à portée de pouce */
+  .sidebar {
+    position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 40; width: 100%; height: var(--tabbar);
+    flex-direction: row; align-items: stretch; gap: 0; padding: 0 2px env(safe-area-inset-bottom, 0px);
+    border: 0; border-top: 1px solid var(--line); background: #1e1d1b;
+  }
+  .brand, .sidebar-foot { display: none; }
+  .nav { flex: 1; flex-direction: row; margin: 0; gap: 0; }
+  .nav-item {
+    flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 3px; padding: 6px 1px 4px;
+    border-radius: 0; font-size: 10.5px; color: var(--text-3); text-align: center;
+  }
+  .nav-item span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+  .nav-item svg { width: 24px; height: 24px; }
+  .nav-item.active { background: transparent; box-shadow: inset 0 3px 0 var(--accent); color: var(--text); }
+  .nav-item:hover:not(:disabled) { background: transparent; }
+  .toast { bottom: calc(var(--tabbar) + 12px); }
+
+  /* Bilan et Répertoire : échiquier en haut, panneau qui défile dessous, boutons en bas */
+  .view-review .review, .view-rep .review {
+    --bsize: min(calc(100vw - 40px), calc(100dvh - var(--tabbar) - 330px), 560px);
+    height: calc(100dvh - var(--tabbar)); flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px; padding: 6px 8px 0;
+  }
+  .view-rep .review { --bsize: min(calc(100vw - 40px), calc(100dvh - var(--tabbar) - 360px), 560px); }
+  .board-col { flex: none; align-self: center; gap: 2px; }
+  .board-area { gap: 6px; }
+  .evalbar { width: 22px; }
+  .pstrip { height: 32px; margin-left: 28px; gap: 8px; }
+  .pavatar { width: 28px; height: 28px; border-radius: 4px; }
+  .pname { font-size: 13.5px; }
+  .pclock { font-size: 14px; min-width: 64px; padding: 2px 6px; }
+  .panel { flex: 1 1 auto; width: 100%; max-width: none; height: auto; min-height: 0; border-radius: 10px 10px 0 0; }
+  .panel-head { padding: 2px 4px 2px 12px; min-height: 40px; }
+  .panel-title { font-size: 15.5px; gap: 7px; }
+  .panel-title svg { width: 18px; height: 18px; }
+  .panel-body { overflow-y: auto; overscroll-behavior: contain; padding: 10px; gap: 10px; }
+  .panel-foot { padding: 6px 8px; }
+  .navbtns .btn { min-height: 46px; }
+  .movelist { flex: none; min-height: 0; max-height: none; }
+  .coach { gap: 8px; }
+  .coach-avatar { width: 44px; margin-top: 6px; }
+  .bubble-coach { font-size: 14px; }
+
+  /* Répertoire : ligne et boutons plus compacts, tableau des coups sans colonne « Toi » */
+  .rep-line { height: 30px; margin-left: 28px; }
+  .rep-nav { height: 38px; margin-left: 28px; }
+  .rep-nav .btn { padding: 6px 10px; font-size: 13px; }
+  .rep-tabs { padding: 6px 8px 0; }
+  .rep-tabs .seg-btn { padding: 7px 4px; font-size: 13px; }
+  .cands th.num, .cands td.num { display: none; }
+  .cands td { padding: 5px 4px; }
+
+  /* Accueil : en-tête compact (mascotte à côté de la bulle) */
+  .home-wrap { padding: 10px 10px 24px; gap: 12px; }
+  .hero { padding: 14px 14px 16px; gap: 12px; }
+  .hero-mascot { flex-direction: row-reverse; align-items: center; gap: 12px; }
+  .clawd-xl { width: 72px; flex: none; }
+  .bubble-hero { font-size: 14px; padding: 10px 12px; }
+  .bubble-hero::after { left: -9px; top: 50%; bottom: auto; margin: -9px 0 0; border: 9px solid transparent; border-right-color: var(--ivory); border-left: 0; }
+  .hero-form h1 { font-size: 24px; }
+  .hero-form .sub { display: none; }
+
+  /* Chat plein écran au-dessus de la barre d'onglets */
+  .chat-wrap { height: calc(100dvh - var(--tabbar)); padding: 0; }
+  .chat { border-radius: 0; }
+  .chat-head { padding: 8px 12px; }
+  .chat-tools .btn { padding: 6px 10px; font-size: 12.5px; }
+  .chat-form { padding: 8px 10px; }
+  .chat-suggest { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; }
+  .chat-suggest .chip { flex: none; }
+
+  /* Réglages en feuille qui monte du bas */
+  .modal { padding: 0; place-items: end stretch; }
+  .modal-card { width: 100%; max-height: calc(100dvh - 20px); border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .modal-body { padding: 0 16px 16px; }
+
+  /* Faiblesses */
+  .ins-wrap { padding: 10px 10px 24px; }
+  .ins-controls h1 { font-size: 24px; }
+  .tab { font-size: 13px; padding: 7px 4px; line-height: 1.2; }
+  .tabs { flex-wrap: nowrap; }
+}

@@ -319,6 +319,7 @@
       }
     });
     $('#chat-input').addEventListener('input', autoGrow);
+    if (window.matchMedia && matchMedia('(max-width: 700px)').matches) $('#chat-input').placeholder = 'Pose ta question à Clawd…';
     $('#chat-new').addEventListener('click', () => {
       if (busy) return;
       const conv = load();
