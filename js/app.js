@@ -42,7 +42,7 @@
 
   const S = {
     settings: Object.assign({}, DEFAULTS, CC.store.get('cc.settings', {})),
-    username: CC.store.get('cc.username', ''),
+    username: CC.store.get('cc.username', '') || 'Theking7252', // pseudo par défaut du propriétaire
     profile: null,
     stats: null,
     games: [],
