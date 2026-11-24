@@ -19,7 +19,8 @@
   let board = null;
   const RP = {
     color: CC.store.get('cc.rep.color', 'w'),
-    tab: 'build',
+    tab: 'tree',
+    tpaths: [], // chemins des coups cliquables de l'arbre
     path: [],
     dataToken: 0,
     stats: { w: null, b: null },
@@ -143,9 +144,11 @@
     renderTab();
   }
   function renderTab() {
-    $('#rep-nav').hidden = RP.tab !== 'build';
-    $('#rep-line').style.visibility = RP.tab === 'build' ? 'visible' : 'hidden';
-    if (RP.tab === 'build') renderBuild(false);
+    const browse = RP.tab === 'build' || RP.tab === 'tree';
+    $('#rep-nav').hidden = !browse;
+    $('#rep-line').style.visibility = browse ? 'visible' : 'hidden';
+    if (RP.tab === 'tree') renderTree(false);
+    else if (RP.tab === 'build') renderBuild(false);
     else if (RP.tab === 'review') {
       if (RP.drill) showCard();
       else renderReviewHome();
@@ -200,6 +203,9 @@
     } else {
       html += '<div class="rep-mine muted">Choisis la réponse adverse à préparer (ou joue-la sur l’échiquier).</div>';
     }
+    RP.tpaths = [];
+    const after = treeHTML(color, RP.path, 10, 80);
+    if (after) html += '<details class="og tree-mini" open><summary><span class="og-name">Suite enregistrée</span></summary>' + after + '</details>';
     html += '<div class="rep-cands" id="rep-cands"><p class="muted small"><span class="cc-spin">✻</span> Je cherche les coups possibles…</p></div>';
     setBody(
       html,
@@ -207,6 +213,221 @@
     );
     mood(mine && !rep ? 'thinking' : 'idle', 'bob');
     loadPositionData(fen, mine);
+  }
+
+  /* =================== MON RÉPERTOIRE (vue façon Chessbook) =================== */
+  /** Arbre du répertoire depuis une position : [{ uci, san, mine, kids }] ; kids === null = transposition */
+  function subtree(color, fen, depth, seen, budget) {
+    const key = R.fenKey(fen);
+    if (seen.has(key)) return null;
+    seen.add(key);
+    const out = [];
+    if (depth <= 0 || budget.n <= 0) return out;
+    const ch = new Chess(fen);
+    if (ch.turn() === color) {
+      const e = R.get(color, fen);
+      if (!e) return out;
+      const mv = ch.move(A.uciMove(e.uci));
+      if (!mv) return out;
+      budget.n--;
+      out.push({ uci: e.uci, san: mv.san, mine: true, kids: subtree(color, ch.fen(), depth - 1, seen, budget) });
+      return out;
+    }
+    for (const m of ch.moves({ verbose: true }).sort((a, b) => (a.piece === 'p' ? 0 : 1) - (b.piece === 'p' ? 0 : 1))) {
+      const c2 = new Chess(fen);
+      c2.move(m);
+      const f2 = c2.fen();
+      if (!R.get(color, f2)) continue;
+      budget.n--;
+      out.push({ uci: uciOf(m), san: m.san, mine: false, f2 });
+    }
+    for (const o of out) o.kids = subtree(color, o.f2, depth - 1, seen, budget);
+    const size = (n) => (n.kids ? n.kids.reduce((t, k) => t + 1 + size(k), 0) : 0);
+    out.sort((a, b) => size(b) - size(a));
+    return out;
+  }
+  const samePath = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+  function tmove(node, path, num) {
+    const ply = path.length;
+    const full = path.concat(node.uci);
+    const label = ply % 2 === 0 ? (ply / 2 + 1) + '.' : num ? (Math.floor(ply / 2) + 1) + '…' : '';
+    const i = RP.tpaths.push(full) - 1;
+    return (label ? '<span class="tv-n">' + label + '</span>' : '') +
+      '<button class="tv-m' + (node.mine ? ' mine' : '') + (samePath(full, RP.path) ? ' on' : '') + '" data-ti="' + i + '">' + CC.sanHTML(node.san) + '</button>';
+  }
+  /** Ligne principale + variantes en retrait (comme un arbre lichess ou Chessbook) */
+  function seqHTML(nodes, path, num) {
+    let html = '';
+    let list = nodes;
+    let p = path;
+    let n = num;
+    while (list && list.length) {
+      const main = list[0];
+      html += tmove(main, p, n);
+      n = false;
+      if (list.length > 1) {
+        html += '<div class="tv-vars">' + list.slice(1).map((a) =>
+          '<div class="tv-var">' + tmove(a, p, true) + (a.kids === null ? '<span class="tv-trans">transposition</span>' : seqHTML(a.kids, p.concat(a.uci), false)) + '</div>'
+        ).join('') + '</div>';
+        n = true;
+      }
+      if (main.kids === null) {
+        html += '<span class="tv-trans">→ transposition</span>';
+        break;
+      }
+      p = p.concat(main.uci);
+      list = main.kids;
+    }
+    return html;
+  }
+  function treeHTML(color, path, depth, cap) {
+    const budget = { n: cap };
+    const nodes = subtree(color, fenOf(path), depth, new Set(), budget) || [];
+    if (!nodes.length) return '';
+    return '<div class="tv">' + seqHTML(nodes, path, path.length % 2 === 1) + '</div>' +
+      (budget.n <= 0 ? '<p class="muted small">… arbre coupé : avance dans une variante pour voir la suite.</p>' : '');
+  }
+
+  /** Sections façon Chessbook : on suit la ligne tant qu'elle est unique, puis un bloc repliable par réponse adverse,
+   *  avec ta réponse dans le titre (« Contre 2…Nc6 → 3.Bc4 ») ; les blocs s'imbriquent à chaque nouvelle bifurcation. */
+  const plyLabel = (ply) => (ply % 2 === 0 ? ply / 2 + 1 + '.' : Math.floor(ply / 2) + 1 + '…');
+  const countMine = (n) => (n.mine ? 1 : 0) + (n.kids ? n.kids.reduce((t, k) => t + countMine(k), 0) : 0);
+  function secHTML(nodes, path, num, level) {
+    let html = '';
+    let stem = '';
+    let p = path;
+    let n = num;
+    let list = nodes;
+    while (list && list.length === 1) {
+      stem += tmove(list[0], p, n);
+      n = false;
+      p = p.concat(list[0].uci);
+      list = list[0].kids;
+    }
+    if (stem) html += '<div class="tv tv-stem">' + stem + (list === null ? '<span class="tv-trans">→ transposition</span>' : '') + '</div>';
+    if (!list || !list.length) return html;
+    const ply = p.length;
+    for (const nd of list) {
+      const ans = nd.kids && nd.kids.length === 1 && nd.kids[0].mine ? nd.kids[0] : null;
+      const op = level < 2 ? A.identifyOpening(sansOf(p.concat(nd.uci)).map((m) => m.san)).opening : null;
+      const inside = RP.path.length > ply && RP.path[ply] === nd.uci;
+      const nMine = countMine(nd);
+      html +=
+        '<details class="og tsec"' + (inside ? ' open' : '') + '><summary><span class="og-name">Contre ' + plyLabel(ply) + ' ' + CC.sanHTML(nd.san) +
+        (ans ? ' <span class="tsec-ans">→ ' + plyLabel(ply + 1) + ' ' + CC.sanHTML(ans.san) + '</span>' : '') +
+        (op ? ' <span class="tsec-op">' + CC.esc(op.name.split(':').pop().trim()) + '</span>' : '') +
+        '</span><span class="og-n">' + nMine + ' coup' + (nMine > 1 ? 's' : '') + '</span></summary><div class="tsec-body">' +
+        (nd.kids === null ? '<div class="tv tv-stem">' + tmove(nd, p, true) + '<span class="tv-trans">→ transposition</span></div>' : secHTML([nd], p, true, level + 1)) +
+        '</div></details>';
+    }
+    return html;
+  }
+  function treeSections(color, path) {
+    const budget = { n: 1200 };
+    const nodes = subtree(color, fenOf(path), 80, new Set(), budget) || [];
+    if (!nodes.length) return '';
+    return secHTML(nodes, path, path.length % 2 === 1, 0) + (budget.n <= 0 ? '<p class="muted small">… arbre coupé : avance dans une variante pour voir la suite.</p>' : '');
+  }
+
+  /** Lignes complètes du répertoire, regroupées par ouverture */
+  function openingGroups(color) {
+    const nodes = R.walk(color);
+    const prefixes = nodes.map((nd) => nd.path.join(' '));
+    const groups = new Map();
+    for (const nd of nodes) {
+      const full = nd.path.concat(nd.move.uci);
+      const fs = full.join(' ') + ' ';
+      if (prefixes.some((p) => p.startsWith(fs))) continue; // pas une fin de ligne
+      const op = A.identifyOpening(nd.sans.concat(nd.move.san)).opening;
+      const name = op ? op.name.split(':')[0].trim() : 'Autres lignes';
+      if (!groups.has(name)) groups.set(name, { name, lines: [] });
+      groups.get(name).lines.push(full);
+    }
+    return Array.from(groups.values()).sort((a, b) => b.lines.length - a.lines.length);
+  }
+  function lineHTML(path) {
+    const ch = new Chess();
+    let html = '';
+    path.forEach((u, k) => {
+      const fb = ch.fen();
+      const mv = ch.move(A.uciMove(u));
+      if (!mv) return;
+      if (mv.color === 'w') html += '<span class="tv-n">' + CC.moveLabel(fb, 'w') + '</span>';
+      const i = RP.tpaths.push(path.slice(0, k + 1)) - 1;
+      html += '<button class="tv-m' + (mv.color === RP.color ? ' mine' : '') + '" data-ti="' + i + '">' + CC.sanHTML(mv.san) + '</button>';
+    });
+    return html;
+  }
+
+  function renderTree(animate) {
+    RP.tpaths = [];
+    const color = RP.color;
+    const fen = curFen();
+    if (board.orientation !== color) board.setOrientation(color);
+    show(fen, animate, RP.path[RP.path.length - 1]);
+    board.setBadge(null);
+    board.setHint(null);
+    movable(fen, null);
+    renderLine();
+    const mine = turnOf(fen) === color;
+    const rep = mine ? R.get(color, fen) : null;
+    // flèches : ton coup en vert, réponses adverses préparées en bleu
+    const arrows = [];
+    if (rep) arrows.push({ from: rep.uci.slice(0, 2), to: rep.uci.slice(2, 4), color: GREEN });
+    let replies = [];
+    if (!mine) {
+      replies = new Chess(fen).moves({ verbose: true }).filter((m) => {
+        const c2 = new Chess(fen);
+        c2.move(m);
+        return !!R.get(color, c2.fen());
+      });
+      replies.slice(0, 6).forEach((m) => arrows.push({ from: m.from, to: m.to, color: BLUE }));
+    }
+    board.setArrows(arrows);
+    const q = R.queue(color);
+    const size = R.size(color);
+    const fresh = Math.min(q.fresh.length, Math.max(0, R.newLeft()));
+    const op = A.identifyOpening(sansOf(RP.path).map((m) => m.san)).opening;
+    const groups = size ? openingGroups(color) : [];
+    let html = '';
+    if (!size) {
+      html += '<div class="tree-empty"><p><b>Ton répertoire ' + side(color) + ' est vide.</b></p><p class="muted">Ajoute le répertoire conseillé en un clic, crée-le depuis tes parties, ou joue tes coups dans « Construire ».</p></div>';
+    } else {
+      html += '<div class="tree-sum">' +
+        '<div><b>' + size + '</b><span>positions</span></div>' +
+        '<div><b>' + groups.reduce((t, g) => t + g.lines.length, 0) + '</b><span>lignes</span></div>' +
+        '<div class="' + (q.due.length ? 'due' : '') + '"><b>' + q.due.length + '</b><span>à réviser</span></div>' +
+        '<div><b>' + fresh + '</b><span>nouveaux</span></div></div>';
+      html += '<div class="rep-pos"><div class="rep-op">' + (op ? CC.esc(op.name) : RP.path.length ? 'Hors des ouvertures répertoriées' : 'Position de départ') + '</div><div class="rep-turn' + (mine ? ' me' : '') + '">' + (mine ? 'À toi de jouer' : 'Coup de l’adversaire') + '</div></div>';
+      if (mine) {
+        html += rep
+          ? '<div class="rep-mine ok"><span>Ton coup ici :</span> ' + san(rep.san) + '</div>'
+          : '<div class="rep-mine">Aucun coup prévu ici. <button class="linkbtn" data-edit>Ajoute-le dans « Construire »</button></div>';
+      } else {
+        html += replies.length
+          ? '<div class="rep-mine"><span>Réponses adverses préparées :</span> ' + replies.map((m) => san(m.san)).join(' ') + '</div>'
+          : '<div class="rep-mine muted">Aucune réponse adverse préparée ici.</div>';
+      }
+      const tree = treeSections(color, RP.path);
+      html += '<h4 class="tree-h">' + (RP.path.length ? 'La suite dans ton répertoire' : 'Tout ton répertoire') + '</h4>';
+      html += tree || '<p class="muted small">Rien d’enregistré après cette position.</p>';
+      html += '<h4 class="tree-h">Tes ouvertures (' + groups.length + ')</h4><div class="og-list">';
+      for (const g of groups) {
+        const open = RP.path.length && g.lines.some((l) => l.length >= RP.path.length && samePath(l.slice(0, RP.path.length), RP.path));
+        html += '<details class="og"' + (open ? ' open' : '') + '><summary><span class="og-name">' + CC.esc(g.name) + '</span><span class="og-n">' + g.lines.length + ' ligne' + (g.lines.length > 1 ? 's' : '') + '</span></summary><div class="og-lines">' +
+          g.lines.map((l) => '<div class="og-line">' + lineHTML(l) + '</div>').join('') + '</div></details>';
+      }
+      html += '</div>';
+    }
+    const todo = q.due.length + fresh;
+    setBody(
+      html,
+      (size ? '<button class="btn btn-sm btn-primary" data-start-review>Réviser' + (todo ? ' (' + todo + ')' : '') + '</button>' : '') +
+        '<button class="btn btn-sm" data-edit>✏️ Modifier ici</button>' +
+        (presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Répertoire conseillé</button>' : '') +
+        (RP.undo && RP.undo.color === color ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : '')
+    );
+    mood(size ? 'happy' : 'meh', 'bob');
   }
 
   function buildReportHTML() {
@@ -325,7 +546,8 @@
 
   function goPath(path, animate) {
     RP.path = path.slice();
-    renderBuild(animate);
+    if (RP.tab === 'tree') renderTree(animate);
+    else renderBuild(animate);
   }
 
   function buildMove(from, to, promo) {
@@ -964,6 +1186,14 @@
       if (RP.tab === 'review' && RP.drill) reviewMove(from, to, promo);
       else if (RP.tab === 'ex' && RP.ex) exMove(from, to, promo);
       else if (RP.tab === 'build') buildMove(from, to, promo);
+      else if (RP.tab === 'tree') {
+        const mv = new Chess(curFen()).move({ from, to, promotion: promo || 'q' });
+        if (mv) {
+          RP.path.push(uciOf(mv));
+          app.sound(mv);
+          renderTree(true);
+        }
+      }
     };
     board.setPosition(CC.START_FEN, false);
     window.__rep = { RP, R, board }; // petit accès pour les tests automatisés
@@ -1003,6 +1233,27 @@
         const fen = curFen();
         const mv = new Chess(fen).move(A.uciMove(pickB.dataset.pick));
         if (mv) pick(fen, uciOf(mv), mv.san, R.get(RP.color, fen));
+        return;
+      }
+      const tm = t.closest('[data-ti]');
+      if (tm) {
+        const p = RP.tpaths[+tm.dataset.ti];
+        if (p) {
+          const prev = RP.path;
+          const one = p.length === prev.length + 1 && samePath(p.slice(0, -1), prev);
+          if (one) {
+            const mv = new Chess(fenOf(prev)).move(A.uciMove(p[p.length - 1]));
+            if (mv) app.sound(mv);
+          }
+          RP.path = p.slice();
+          if (RP.tab === 'tree') renderTree(one);
+          else renderBuild(one);
+        }
+        return;
+      }
+      if (t.closest('[data-edit]')) {
+        RP.tab = 'build';
+        renderTabs();
         return;
       }
       const go = t.closest('[data-go]');
@@ -1084,10 +1335,9 @@
     if (RP.presetNote && RP.presetNote.length) {
       const list = RP.presetNote;
       RP.presetNote = null;
-      const last = list[list.length - 1];
-      RP.color = last.color;
+      RP.color = list[0].color;
       RP.path = [];
-      RP.tab = 'build';
+      RP.tab = 'tree';
       const names = list.map((p) => '« ' + CC.esc(p.name) + ' »').join(' et ');
       setTimeout(() => app.toast(`J’ai ajouté ${list.length > 1 ? 'les répertoires conseillés' : 'le répertoire conseillé'} ${names}. <button class="linkbtn" data-undo>Annuler</button>`), 300);
     }

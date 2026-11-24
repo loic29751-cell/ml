@@ -59,6 +59,7 @@ L'onglet **Puzzles** propose des puzzles de la base publique lichess (sans compt
 
 L'onglet **Répertoire** gère tes ouvertures, avec les Blancs et avec les Noirs :
 
+- **Mon répertoire** (vue par défaut, façon Chessbook) : tout ce qui est enregistré, en arbre repliable. Chaque réponse adverse a son bloc « Contre 2…Nc6 → 3.Bc4 » avec ta réponse et le nombre de coups prévus. Clique sur un coup et l'échiquier y va (flèche verte pour ton coup, bleues pour les réponses préparées). En dessous, tes lignes regroupées par ouverture, et en bas « Réviser » et « Modifier ici ».
 - **Construire** : joue tes coups sur l'échiquier. Pour chaque position tu vois les coups des maîtres (base lichess, % et résultats), l'évaluation Stockfish (★ = meilleur coup) et ce que tu joues dans tes parties. Les transpositions sont reconnues.
 - **Répertoire conseillé (Blancs)** : 1.e4 avec l'Italienne offensive (gambit Evans 4.b4 contre 3…Bc5, 4.Ng5 contre 3…Nf6), 3.Nxe5 contre la Petrov, la punition de 2…f6, 2.exd5 contre la Scandinave, l'Alapin (2.c3) contre la Sicilienne, et des réponses simples au reste.
 - **Répertoire conseillé (Noirs)** : un répertoire Noirs tout prêt et vérifié par Stockfish, 1…e5 contre 1.e4 (Italienne, Espagnole, Écossaise, 2.d4 exd4, dame sortie tôt avec Qh5 ou Qf3) et 1…d5 contre le reste. Chacun est ajouté automatiquement si ton répertoire de cette couleur est vide (bouton « Annuler » pour le retirer), et reste disponible en un clic.

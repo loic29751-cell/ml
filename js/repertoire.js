@@ -79,7 +79,8 @@
         const mv = ch.move(A.uciMove(e.uci));
         if (mv) rec(ch.fen(), path.concat(e.uci), sans.concat(mv.san));
       } else {
-        const replies = ch.moves({ verbose: true });
+        // coups de pion d'abord : les transpositions sont rangées dans l'ordre habituel (1.e4 e5 2.Nf3 Nc6 plutôt que 1.e4 Nc6 2.Nf3 e5)
+        const replies = ch.moves({ verbose: true }).sort((a, b) => (a.piece === 'p' ? 0 : 1) - (b.piece === 'p' ? 0 : 1));
         for (const m of replies) {
           ch.load(fen);
           ch.move(m);
