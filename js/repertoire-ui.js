@@ -427,6 +427,106 @@
     return secHTML(nodes, path, path.length % 2 === 1, 0) + (budget.n <= 0 ? '<p class="muted small">… arbre coupé : avance dans une variante pour voir la suite.</p>' : '');
   }
 
+  /* ---------------- Favoris : pièges, ouvertures, lignes ou positions mis de côté pour les réviser ---------------- */
+  const FAV_KEY = 'cc.rep.favs';
+  const FAV_KIND = { trap: 'piège', line: 'ligne', group: 'ouverture', branch: 'position', drill: 'révision' };
+  function favData() {
+    const f = CC.store.get(FAV_KEY, null) || {};
+    if (!Array.isArray(f.w)) f.w = [];
+    if (!Array.isArray(f.b)) f.b = [];
+    return f;
+  }
+  const favList = (color) => favData()[color];
+  const isFav = (color, id) => favList(color).some((x) => x.id === id);
+  function toggleFav(color, item) {
+    const f = favData();
+    const list = f[color];
+    const i = list.findIndex((x) => x.id === item.id);
+    if (i >= 0) list.splice(i, 1);
+    else list.unshift(Object.assign({ t: Date.now() }, item));
+    CC.store.set(FAV_KEY, f);
+    return i < 0;
+  }
+  /** Lignes d'un favori : une position suit le répertoire tel qu'il est aujourd'hui */
+  const favPaths = (x) => (x.kind === 'branch' ? branchPaths(x.prefix) : x.paths || []);
+  const starBtn = (attr, on) => '<button class="fav-btn' + (on ? ' on' : '') + '" ' + attr + ' title="' + (on ? 'Retirer des favoris' : 'Ajouter aux favoris') + '">' + (on ? '★' : '☆') + '</button>';
+  const lineShort = (path) =>
+    sansOf(path)
+      .slice(-4)
+      .map((m, k) => (m.color === 'w' || k === 0 ? m.label + ' ' : '') + m.san)
+      .join(' ');
+  function favBoxHTML(color) {
+    const list = favList(color);
+    if (!list.length) return '<div id="fav-box" class="fav-hint muted small">☆ Touche l’étoile d’un piège, d’une ouverture ou d’une ligne (ou « ☆ Favori » sur une position) pour la garder dans tes favoris.</div>';
+    return (
+      '<div id="fav-box"><details class="og favs" open><summary><span class="og-name">⭐ Mes favoris</span><span class="og-n">' + list.length + '</span><button class="og-play" data-fav-all>▶ Tout réviser</button></summary><div class="fav-list">' +
+      list
+        .map(
+          (x, i) =>
+            '<div class="fav" data-fav-drill="' + i + '" title="Réviser"><span class="ol-play">▶</span><span class="fav-name">' + CC.esc(x.name) + '</span><span class="tag">' + (FAV_KIND[x.kind] || '') + '</span>' +
+            '<button class="fav-del" data-fav-del="' + i + '" title="Retirer des favoris">✕</button></div>'
+        )
+        .join('') +
+      '</div></details></div>'
+    );
+  }
+  function drillFavId(src) {
+    return 'drill:' + src.paths.map((p) => p.join(' ')).join('|');
+  }
+  /** Étoiles, ✕ et ▶ des favoris */
+  function favAction(el) {
+    const color = RP.color;
+    const ds = el.dataset;
+    if (ds.favDel != null) {
+      const x = favList(color)[+ds.favDel];
+      if (x) toggleFav(color, x);
+      app.toast('Retiré de tes favoris.');
+      return refreshFavs();
+    }
+    if (ds.favDrill != null) {
+      const x = favList(color)[+ds.favDrill];
+      if (x) startLineReview(favPaths(x), '⭐ ' + x.name);
+      return;
+    }
+    if (ds.favAll != null) {
+      const paths = favList(color).flatMap(favPaths);
+      if (paths.length) startLineReview(paths, '⭐ Mes favoris');
+      return;
+    }
+    let item = null;
+    if (ds.favTrap != null) {
+      const x = (RP.traps || [])[+ds.favTrap];
+      if (x) item = { id: 'trap:' + x.line, kind: 'trap', name: x.name, paths: [x.path] };
+    } else if (ds.favGroup != null) {
+      const g = (RP.groups || [])[+ds.favGroup];
+      if (g) item = { id: 'group:' + g.name, kind: 'group', name: g.name, paths: g.lines };
+    } else if (ds.favLine != null) {
+      const l = (RP.tlines || [])[+ds.favLine];
+      if (l) item = { id: 'line:' + l.path.join(' '), kind: 'line', name: l.name + ' · ' + lineShort(l.path), paths: [l.path] };
+    } else if (ds.favHere != null && RP.path.length) {
+      item = { id: 'branch:' + RP.path.join(' '), kind: 'branch', name: lineTitle(RP.path) + ' · ' + lineShort(RP.path), prefix: RP.path.slice() };
+    } else if (ds.favDrillsrc != null && RP.drill && RP.drill.src) {
+      const src = RP.drill.src;
+      // si cette révision vient déjà d'un favori (piège, ligne…), l'étoile retire ce favori-là
+      const same = favList(color).find((x) => x.id === drillFavId(src) || (x.paths && x.paths.length === src.paths.length && x.paths.every((p, i) => samePath(p, src.paths[i]))));
+      item = same || { id: drillFavId(src), kind: 'drill', name: src.title.replace(/^⭐ /, ''), paths: src.paths };
+    }
+    if (!item) return;
+    const on = toggleFav(color, item);
+    app.toast(on ? '⭐ Ajouté à tes favoris' : 'Retiré de tes favoris.');
+    if (el.classList.contains('fav-btn')) {
+      el.classList.toggle('on', on);
+      el.textContent = on ? '★' : '☆';
+      el.title = on ? 'Retirer des favoris' : 'Ajouter aux favoris';
+    } else el.textContent = on ? '★ Favori' : '☆ Favori';
+    refreshFavs();
+  }
+  function refreshFavs() {
+    const box = $('#fav-box');
+    if (box) box.outerHTML = favBoxHTML(RP.color);
+    if (RP.tab === 'review' && !RP.drill) renderReviewHome();
+  }
+
   /** Pièges de mat des packs de cette couleur qui passent par le chemin donné (tous si on est au départ) */
   function trapsFor(color, path) {
     const out = [];
@@ -506,6 +606,7 @@
         '<div><b>' + groups.reduce((t, g) => t + g.lines.length, 0) + '</b><span>lignes</span></div>' +
         '<div class="' + (q.due.length ? 'due' : '') + '"><b>' + q.due.length + '</b><span>à réviser</span></div>' +
         '<div><b>' + fresh + '</b><span>nouveaux</span></div></div>';
+      html += favBoxHTML(color);
       html += '<div class="rep-pos"><div class="rep-op">' + (op ? CC.esc(op.name) : RP.path.length ? 'Hors des ouvertures répertoriées' : 'Position de départ') + '</div><div class="rep-turn' + (mine ? ' me' : '') + '">' + (mine ? 'À toi de jouer' : 'Coup de l’adversaire') + '</div></div>';
       if (mine) {
         html += rep
@@ -525,7 +626,7 @@
       const trapRow = (x, i) =>
         '<div class="trap" data-drill-trap="' + i + '" title="Réviser ce piège"><div class="trap-h"><span class="ol-play">▶</span><b>' + CC.esc(x.name) + '</b>' +
         (/#$/.test(x.line) ? '<span class="tag good">mat</span>' : '<span class="tag warn">' + CC.esc(x.gain || 'gain de matériel') + '</span>') +
-        (x.pack.extra ? '<span class="tag">gambit en plus</span>' : '') + '</div>' +
+        (x.pack.extra ? '<span class="tag">gambit en plus</span>' : '') + starBtn('data-fav-trap="' + i + '"', isFav(color, 'trap:' + x.line)) + '</div>' +
         '<div class="trap-d">' + CC.esc(x.desc) + '</div><div class="trap-l">' + lineHTML(x.path) + '</div></div>';
       if (mates.length) {
         html +=
@@ -547,8 +648,13 @@
       RP.tlines = [];
       groups.forEach((g, gi) => {
         const open = RP.path.length && g.lines.some((l) => l.length >= RP.path.length && samePath(l.slice(0, RP.path.length), RP.path));
-        html += '<details class="og og-g"' + (open ? ' open' : '') + '><summary data-drill-group="' + gi + '" title="Réviser ' + CC.esc(g.name) + '"><span class="og-name">' + CC.esc(g.name) + '</span><span class="og-n">' + g.lines.length + ' ligne' + (g.lines.length > 1 ? 's' : '') + '</span><span class="og-play">▶ Réviser</span><span class="og-chev" data-og-toggle title="Voir les coups">▾</span></summary><div class="og-lines">' +
-          g.lines.map((l) => '<div class="og-line" data-drill-line="' + (RP.tlines.push({ path: l, name: g.name }) - 1) + '" title="Réviser cette ligne"><span class="ol-play">▶</span>' + lineHTML(l) + '</div>').join('') + '</div></details>';
+        html += '<details class="og og-g"' + (open ? ' open' : '') + '><summary data-drill-group="' + gi + '" title="Réviser ' + CC.esc(g.name) + '"><span class="og-name">' + CC.esc(g.name) + '</span><span class="og-n">' + g.lines.length + ' ligne' + (g.lines.length > 1 ? 's' : '') + '</span>' + starBtn('data-fav-group="' + gi + '"', isFav(color, 'group:' + g.name)) + '<span class="og-play">▶ Réviser</span><span class="og-chev" data-og-toggle title="Voir les coups">▾</span></summary><div class="og-lines">' +
+          g.lines
+            .map((l) => {
+              const li = RP.tlines.push({ path: l, name: g.name }) - 1;
+              return '<div class="og-line" data-drill-line="' + li + '" title="Réviser cette ligne"><span class="ol-play">▶</span>' + lineHTML(l) + starBtn('data-fav-line="' + li + '"', isFav(color, 'line:' + l.join(' '))) + '</div>';
+            })
+            .join('') + '</div></details>';
       });
       html += '</div>';
     }
@@ -556,6 +662,7 @@
     setBody(
       html,
       (size && RP.path.length ? '<button class="btn btn-sm btn-primary" data-drill-here>▶ Réviser cette ligne</button>' : '') +
+        (size && RP.path.length ? '<button class="btn btn-sm" data-fav-here>' + (isFav(color, 'branch:' + RP.path.join(' ')) ? '★ Favori' : '☆ Favori') + '</button>' : '') +
         (size ? '<button class="btn btn-sm' + (RP.path.length ? '' : ' btn-primary') + '" data-start-review>' + (RP.path.length ? 'Tout réviser' : 'Réviser') + (todo ? ' (' + todo + ')' : '') + '</button>' : '') +
         '<button class="btn btn-sm" data-edit>✏️ Modifier ici</button>' +
         (presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Mes répertoires</button>' : '') +
@@ -890,7 +997,8 @@
       </div>
       <p class="rep-help">Je joue les coups de ton adversaire, tu retrouves les tiens. Un coup bien su revient de plus en plus tard (1, 3, 7, 16 jours…), un coup oublié revient tout de suite.</p>
       ${q.cards.length ? '' : '<p class="muted">Ton répertoire est vide : construis-le d’abord (onglet « Construire »), ou crée-le depuis tes parties.</p>'}`,
-      q.due.length + fresh ? '<button class="btn btn-primary btn-xl" data-start-review>Commencer la révision</button>' : '<button class="btn btn-wide" data-tab-go="build">Construire mon répertoire</button>'
+      (q.due.length + fresh ? '<button class="btn btn-primary btn-xl" data-start-review>Commencer la révision</button>' : '<button class="btn btn-wide" data-tab-go="build">Construire mon répertoire</button>') +
+        (favList(RP.color).length ? '<button class="btn btn-wide" data-fav-all>⭐ Réviser mes favoris (' + favList(RP.color).length + ')</button>' : '')
     );
   }
 
@@ -1019,7 +1127,7 @@
       <div class="bubble drill-bubble">${msg}
         <div class="drill-line">${line}</div>${op ? `<div class="muted small">${CC.esc(op.name)}</div>` : ''}</div>
       <div class="bubble why-box" id="why-box" hidden></div>`,
-      `${viewing ? '<button class="btn btn-sm btn-primary" data-rv-live>Revenir au coup à trouver</button>' : d.state === 'ask' ? '<button class="btn btn-sm" data-reveal>Je ne sais plus</button>' : '<button class="btn btn-sm" data-why>Pourquoi ce coup ?</button>'}${!viewing && d.state === 'done' ? '<button class="btn btn-sm btn-primary" data-next-card>Continuer</button>' : ''}<button class="btn btn-sm btn-ghost" data-stop-review>Arrêter</button>`
+      `${viewing ? '<button class="btn btn-sm btn-primary" data-rv-live>Revenir au coup à trouver</button>' : d.state === 'ask' ? '<button class="btn btn-sm" data-reveal>Je ne sais plus</button>' : '<button class="btn btn-sm" data-why>Pourquoi ce coup ?</button>'}${!viewing && d.state === 'done' ? '<button class="btn btn-sm btn-primary" data-next-card>Continuer</button>' : ''}${d.src ? `<button class="btn btn-sm" data-fav-drillsrc>${isFav(RP.color, drillFavId(d.src)) || favList(RP.color).some((x) => x.paths && x.paths.length === d.src.paths.length && x.paths.every((p, i) => samePath(p, d.src.paths[i]))) ? '★ Favori' : '☆ Favori'}</button>` : ''}<button class="btn btn-sm btn-ghost" data-stop-review>Arrêter</button>`
     );
     renderNav();
     if (!d.msg && !viewing) mood('thinking', 'bob');
@@ -1560,8 +1668,13 @@
     // Une seule fois (répertoire v2) : on retire ce que les anciens répertoires conseillés avaient ajouté
     // et on met tes ouvertures + les pièges de mat + le gambit en plus de chaque couleur. Tes coups à toi
     // (Construire, tes parties, le chat) sont gardés et passent avant les packs. Annulable.
-    if (!CC.store.get('cc.rep.v2', false)) {
+    // Version des packs : à chaque nouvelle version, les coups venant des packs sont refaits (tes coups à toi restent).
+    // v3 : sans le coup du berger contre 1…g6 ni les « mat du lion ».
+    const REP_VER = 3;
+    const firstTime = !CC.store.get('cc.rep.v2', false);
+    if (firstTime || CC.store.get('cc.rep.ver', 2) < REP_VER) {
       CC.store.set('cc.rep.v2', true);
+      CC.store.set('cc.rep.ver', REP_VER);
       const d = R.data();
       const snaps = { w: R.snapshot('w'), b: R.snapshot('b') };
       let removed = 0;
@@ -1583,8 +1696,10 @@
       R.save();
       if (added.length || removed) {
         RP.undo = { both: snaps };
-        RP.presetNote = added;
-        RP.migrated = removed > 0;
+        if (firstTime) {
+          RP.presetNote = added;
+          RP.migrated = removed > 0;
+        } else RP.updateNote = 'Répertoire mis à jour : coup du berger contre 1…g6 et « mat du lion » retirés (contre 1…g6, c’est maintenant 3.d4).';
       }
     }
     board = new CC.Board($('#rep-board'), { orientation: RP.color });
@@ -1636,6 +1751,13 @@
     });
     $('#view-rep').addEventListener('click', (e) => {
       const t = e.target;
+      // Favoris d'abord : l'étoile est souvent dans une ligne ou un titre qui lance une révision
+      const fv = t.closest('[data-fav-trap],[data-fav-group],[data-fav-line],[data-fav-here],[data-fav-del],[data-fav-drill],[data-fav-all],[data-fav-drillsrc]');
+      if (fv) {
+        e.preventDefault();
+        e.stopPropagation();
+        return favAction(fv);
+      }
       const pickB = t.closest('[data-pick]');
       if (pickB) {
         const fen = curFen();
@@ -1845,6 +1967,11 @@
     });
   };
   UI.show = function () {
+    if (RP.updateNote) {
+      const note = RP.updateNote;
+      RP.updateNote = null;
+      setTimeout(() => app.toast(CC.esc(note) + ' <button class="linkbtn" data-undo>Annuler</button>'), 300);
+    }
     if (RP.presetNote) {
       const list = RP.presetNote;
       RP.presetNote = null;

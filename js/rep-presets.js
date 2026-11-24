@@ -10,7 +10,7 @@
       id: 'w-mine',
       color: 'w',
       name: 'Blancs : mes ouvertures + pièges de mat',
-      desc: 'Tes coups à toi (1.e4, 2.Nf3, 3.Bc4, 4.Ng5 sur f7…), corrigés là où ils perdaient, avec les pièges de mat qui vont avec : foie frit, mat de Légal, Damiano, piège de la Petrov, Caro-Kann (mat à l’étouffée, Bxf7#), coup du berger contre 1…g6, Milner-Barry contre la Française.',
+      desc: 'Tes coups à toi (1.e4, 2.Nf3, 3.Bc4, 4.Ng5 sur f7…), corrigés là où ils perdaient, avec les pièges de mat qui vont avec : foie frit, mat de Légal, Damiano, piège de la Petrov, Caro-Kann (mat à l’étouffée, Bxf7#), Milner-Barry contre la Française.',
       traps: [
         { name: 'Mat de Légal', line: 'e4 e5 Nf3 Nc6 Bc4 d6 Nc3 Bg4 h3 Bh5 Nxe5 Bxd1 Bxf7+ Ke7 Nd5#', desc: 'Le fou noir cloue ton cavalier ? Prends e5 quand même : s’il prend ta dame, c’est mat en 2.' },
         { name: 'Mat de Légal (contre 2…d6)', line: 'e4 e5 Nf3 d6 Bc4 Bg4 Nc3 g6 Nxe5 Bxd1 Bxf7+ Ke7 Nd5#', desc: 'Même idée contre la Philidor : 4…g6 ? et Nxe5 ! gagne.' },
@@ -27,10 +27,6 @@
         { name: 'Blackburne-Shilling : le fou c5 tombe', line: 'e4 e5 Nf3 Nc6 Bc4 Nd4 Nxd4 exd4 O-O Bc5 Bxf7+ Kxf7 Qh5+ Ke7 Qxc5+', desc: 'Contre 3…Nd4, ne prends pas e5 (piège !) : échange en d4, puis Bxf7+ et Qh5+ ramassent le fou c5.', gain: 'gagne un pion, roi noir à découvert' },
         { name: 'Caro-Kann : mat à l’étouffée', line: 'e4 c6 Nf3 d5 Nc3 dxe4 Nxe4 Nd7 Qe2 Ngf6 Nd6#', desc: 'Le pion e7 est cloué par ta dame : Nd6 est mat.' },
         { name: 'Caro-Kann : Bxf7#', line: 'e4 c6 Nf3 d5 Nc3 dxe4 Nxe4 Bf5 Ng3 Bg6 h4 h6 Ne5 Bh7 Qh5 g6 Bc4 gxh5 Bxf7#', desc: 'Ta dame se donne en h5 : s’il la prend, Bxf7 est mat.' },
-        { name: 'Coup du berger contre 1…g6', line: 'e4 g6 Bc4 Bg7 Qf3 Nc6 Qxf7#', desc: 'Fou c4 + dame f3 sur f7 : s’il ne voit pas la menace, mat en 4 coups.' },
-        { name: 'Mat du lion (1…f6 ?)', line: 'e4 f6 d4 g5 Qh5#', desc: 'Il ouvre la diagonale e8-h5 : Qh5 mat au 3e coup.' },
-        { name: 'Mat du lion (1…g5 ?)', line: 'e4 g5 d4 f6 Qh5#', desc: 'Même mat dans l’autre ordre.' },
-        { name: 'Mat du lion (1…f5 ?)', line: 'e4 f5 exf5 g5 Qh5#', desc: 'Contre la Hollandaise ratée.' },
         { name: 'Française : piège Milner-Barry', line: 'e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Qb6 Bd3 cxd4 cxd4 Nxd4 Nxd4 Qxd4 Bb5+', desc: 'Il prend le pion d4 deux fois : Bb5+ découvre ta dame sur la sienne.', gain: 'gagne la dame' },
       ],
       lines: [
@@ -169,17 +165,17 @@
         'e4 e6 d4 d5 e5 Ne7 Nf3',
         'e4 e6 d4 d5 e5 Nc6 Nf3',
         'e4 e6 d4 Nf6 e5 Nd5 c4',
-        // 1…g6 : 2.Bc4 et la dame en f3 (coup du berger)
-        'e4 g6 Bc4 Bg7 Qf3 e6 Ne2',
-        'e4 g6 Bc4 Bg7 Qf3 Nf6 e5',
-        'e4 g6 Bc4 Bg7 Qf3 d6 Qxf7+ Kd7 Qxg7',
-        'e4 g6 Bc4 Bg7 Qf3 e5 Qxf7#',
+        // 1…g6 : 2.Bc4 puis 3.d4
+        'e4 g6 Bc4 Bg7 d4 d6 Nf3',
+        'e4 g6 Bc4 Bg7 d4 e6 Nc3',
+        'e4 g6 Bc4 Bg7 d4 c6 Nf3',
         'e4 g6 Bc4 e6 d4',
         'e4 g6 Bc4 c6 d4',
-        'e4 g6 Bc4 d6 Qf3',
+        'e4 g6 Bc4 d6 d4',
         'e4 g6 Bc4 Nf6 Nc3',
-        // Premiers coups rares : le mat du lion guette
+        // Premiers coups rares
         'e4 f6 d4 e5 dxe5 fxe5 Qh5+ g6 Qxe5+',
+        'e4 g5 d4',
         'e4 f5 exf5 Nf6 d4',
         'e4 f5 exf5 d5 Qh5+ g6 fxg6 Nf6 g7+ Nxh5 gxh8=Q',
         'e4 b6 d4 Bb7 Bd3',
@@ -234,7 +230,7 @@
       id: 'b-mine',
       color: 'b',
       name: 'Noirs : mes ouvertures + pièges de mat',
-      desc: 'Ton 1…e5 et …Nc6 contre tout, corrigés là où ils perdaient (plus de 2…Nf6 ? contre Qh5), avec les pièges : Traxler (…Bxf2+), Englund (…Qc1#), fourchette …Nd4 contre la dame sortie trop tôt, contre-gambit Falkbeer (…Qh4+), gambit From (…Bg3#), mat du lion.',
+      desc: 'Ton 1…e5 et …Nc6 contre tout, corrigés là où ils perdaient (plus de 2…Nf6 ? contre Qh5), avec les pièges : Traxler (…Bxf2+), Englund (…Qc1#), fourchette …Nd4 contre la dame sortie trop tôt, contre-gambit Falkbeer (…Qh4+), gambit From (…Bg3#).',
       traps: [
         { name: 'Traxler : le roi blanc se promène', line: 'e4 e5 Nf3 Nf6 Bc4 Nc6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Ke1 Qh4+ Ke2 Qf2+ Kd3 Nc5+ Kc3 Qd4#', desc: 'Il prend f7 avec le cavalier : …Bxf2+ et …Nxe4+ sortent son roi, mat en quelques coups.' },
         { name: 'Traxler : mat en f2', line: 'e4 e5 Nf3 Nf6 Bc4 Nc6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Kf1 Qh4 Nxh8 Qf2#', desc: 'S’il croque la tour h8, …Qf2 est mat.' },
@@ -251,9 +247,6 @@
         { name: 'Partie du centre : le clouage', line: 'e4 e5 d4 exd4 Qxd4 Nc6 Qc3 Bb4', desc: 'Sa dame en c3 est clouée sur son roi : tu la gagnes.', gain: 'gagne la dame' },
         { name: 'Gambit From : mat en g3', line: 'f4 e5 fxe5 d6 exd6 Bxd6 Nf3 g5 h3 Bg3#', desc: 'Contre 1.f4 : sacrifie e5, et si h3 ?, …Bg3 est mat.' },
         { name: 'Gambit From : …Qh4+', line: 'f4 e5 fxe5 d6 exd6 Bxd6 Nc3 Qh4+ g3 Qxg3+ hxg3 Bxg3#', desc: 'La dame se sacrifie en g3, le fou mate.' },
-        { name: 'Mat du lion (2.f3 ?)', line: 'g4 e5 f3 Qh4#', desc: 'Le mat le plus rapide : deux coups de pion faibles et …Qh4 mate.' },
-        { name: 'Mat du lion (2.g4 ?)', line: 'f3 e5 g4 Qh4#', desc: 'Même mat dans l’autre ordre.' },
-        { name: 'Mat du lion (1.f4)', line: 'f4 e5 g3 exf4 gxf4 Qh4#', desc: 'Il reprend en f4 avec le pion g : mat.' },
       ],
       lines: [
         // Contre 2.Nf3 : 2…Nf6, puis contre 3.Bc4 : 3…Nc6 et le Traxler (4.Ng5 Bc5)
@@ -464,6 +457,8 @@
         'g3 e5 Bg2 d5',
         'h3 e5 e4 Nf6',
         'f3 e5 e4 Nc6',
+        'g4 e5',
+        'f4 e5 g3 exf4',
       ],
     },
     {

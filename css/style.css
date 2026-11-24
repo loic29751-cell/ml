@@ -1021,3 +1021,20 @@ select { background: var(--bg-deep); border: 1px solid var(--line); border-radiu
 }
 .mate-banner { text-align: center; font-size: 22px; font-weight: 900; color: #fff; background: linear-gradient(135deg, var(--accent), #b8563a); border-radius: 12px; padding: 12px 10px; box-shadow: 0 3px 0 var(--accent-lo); }
 .traps-gain { box-shadow: inset 3px 0 0 #f2c14e; }
+
+/* ================= Répertoire : favoris ================= */
+.fav-btn { border: 0; background: none; cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 6px; color: var(--text-3); border-radius: 6px; margin-left: auto; }
+.fav-btn:hover { color: #f2c14e; background: rgba(242, 193, 78, 0.12); }
+.fav-btn.on { color: #f2c14e; }
+.og-line .fav-btn { float: right; margin-left: 6px; }
+.og-g summary .fav-btn { margin-left: 0; }
+.fav-hint { padding: 2px 2px 4px; }
+.favs { box-shadow: inset 3px 0 0 #f2c14e; }
+.favs summary .og-play { padding: 3px 9px; }
+.fav-list { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 4px; }
+.fav { display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 8px; padding: 7px 8px; background: rgba(255, 255, 255, 0.03); }
+.fav:hover { background: rgba(242, 193, 78, 0.1); }
+.fav-name { flex: 1; min-width: 0; font-weight: 800; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fav .tag { margin-left: 0; flex: none; }
+.fav-del { border: 0; background: none; cursor: pointer; color: var(--text-3); font-size: 14px; padding: 2px 6px; border-radius: 6px; flex: none; }
+.fav-del:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
