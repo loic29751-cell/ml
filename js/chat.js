@@ -38,7 +38,11 @@
     const lines = CC.esc(String(text || '').trim()).split('\n');
     let html = '';
     let list = null;
-    const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+    const inline = (s) =>
+      s
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+        .replace(/(^|[^*\w])\*(?!\s)([^*\n]+?)\*(?!\w)/g, '$1<i>$2</i>');
     for (const raw of lines) {
       const l = raw.trim();
       const bullet = /^([-•*]|\d+[.)])\s+(.*)$/.exec(l);
@@ -57,7 +61,15 @@
         list = null;
       }
       if (!l) continue;
-      html += `<p>${inline(l.replace(/^#+\s*/, ''))}</p>`;
+      if (/^(-{3,}|\*{3,}|_{3,})$/.test(l)) {
+        html += '<hr>';
+        continue;
+      }
+      if (/^#+\s/.test(l)) {
+        html += `<p class="md-h">${inline(l.replace(/^#+\s*/, ''))}</p>`;
+        continue;
+      }
+      html += `<p>${inline(l)}</p>`;
     }
     if (list) html += `</${list}>`;
     return html;
@@ -122,6 +134,7 @@
     let t = `Salut${name ? ' ' + CC.esc(name) : ''} ! C’est notre coin privé : pose-moi toutes tes questions sur ton jeu. Je peux aussi remplir ton répertoire d’ouvertures selon tes besoins (tu pourras tout annuler).`;
     if (ctx) t += ` Je connais tes <b>${ctx.n}</b> parties analysées (${CC.esc(ctx.label)}), séparées par cadence.`;
     else t += ' Pour que je te connaisse vraiment, lance d’abord une analyse dans <button class="linkbtn" data-go="insights">Mes faiblesses</button>.';
+    t += ' Tu peux aussi me demander un <button class="linkbtn" data-bilan>bilan complet de toutes tes parties</button> : je les fais analyser, puis je te montre tes erreurs principales, des gambits pour les Blancs et les Noirs, et comment progresser.';
     if (!CC.AI.hasKey(app.S.settings)) {
       t +=
         '<br><br>Pour discuter avec moi ici, il faut une clé API Claude ou Gemini (<button class="linkbtn" data-key>l’ajouter</button>). Sinon, copie ton rapport et colle-le dans claude.ai : <button class="linkbtn" data-export>copier pour claude.ai</button>.';
@@ -334,6 +347,7 @@
       if (s) send(s.textContent);
       if (e.target.closest('[data-key]')) app.openSettings('ai');
       if (e.target.closest('[data-export]')) exportToClaude();
+      if (e.target.closest('[data-bilan]') && app.coachBilan) app.coachBilan();
       const go = e.target.closest('[data-go]');
       if (go) app.showView(go.dataset.go);
       const act = e.target.closest('.act-card[data-mi] [data-act]');
@@ -347,6 +361,18 @@
   UI.show = function () {
     render();
     setTimeout(() => $('#chat-input').focus(), 30);
+  };
+  /** Envoie une demande au coach depuis ailleurs dans l'appli ; fresh = nouvelle conversation (avec le rapport à jour) */
+  UI.ask = function (text, opts) {
+    if (busy) return Promise.resolve();
+    if (opts && opts.fresh) {
+      const old = load();
+      if (old && old.messages.length) CC.store.set('cc.chat.prev', old); // l'ancienne conversation est gardée de côté
+      CC.store.del(KEY);
+    }
+    pendingCtx = null;
+    app.showView('chat');
+    return send(text);
   };
   /** Depuis le bilan d'une partie : ouvre le chat avec la partie en pièce jointe */
   UI.aboutGame = function (ctxText) {

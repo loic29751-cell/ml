@@ -2198,6 +2198,49 @@
         .catch(() => setEngineStatus('error'));
     }, 400);
 
+    // Bilan complet : réanalyse de toutes les parties, puis demande détaillée au coach (chat)
+    const BILAN_PROMPT = [
+      'Voici l’analyse Stockfish de toutes mes parties (le rapport est dans ton contexte). Fais-moi un bilan complet et détaillé ; tu peux dépasser 200 mots, avec des listes :',
+      '1. Mes 5 erreurs principales, chacune avec un ou deux exemples précis tirés du rapport (coup joué, meilleur coup, cadence) et ce que je dois changer concrètement.',
+      '2. Ce qui change selon la cadence (bullet, 5 min, 10 min) : forces et faiblesses de chacune.',
+      '3. Des gambits adaptés à mon niveau, pour les Blancs et pour les Noirs : présente UNIQUEMENT ceux de la liste « gambits vérifiés » ci-dessous (lignes contrôlées par Stockfish, disponibles dans l’appli), avec les premiers coups, l’idée et le piège principal, sans inventer d’autres variantes. Regarde d’abord mon répertoire (get_repertoire pour les deux couleurs) pour dire lesquels j’ai déjà et lesquels seraient nouveaux. Explique comment les ajouter : onglet Répertoire › 📘 Répertoires conseillés. N’ajoute rien toi-même sans que je le demande.',
+      '4. Un plan concret sur deux semaines pour passer de 650 à 750 en 10 minutes.',
+    ].join('\n');
+    /** Les gambits vérifiés de l'appli, pour que le coach s'appuie sur des lignes contrôlées */
+    function gambitsText() {
+      const out = ['', 'Gambits vérifiés disponibles dans l’appli :'];
+      const W = [['Gambit Evans', 'e4 e5 Nf3 Nc6 Bc4 Bc5 b4 Bxb4 c3 Ba5 d4 exd4 O-O'], ['Attaque 4.Ng5 et Fegatello', 'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 Nxf7 Kxf7 Qf3+']];
+      out.push('- Blancs (répertoire « Blancs : 1.e4, Italienne et gambits ») : ' + W.map((x) => x[0] + ' (' + x[1] + ')').join(' ; ') + ' ; et contre 2…f6 : 3.Nxe5! fxe5 4.Qh5+.');
+      for (const pre of CC.RepPresets || []) {
+        if (!pre.variant) continue;
+        out.push('- ' + pre.name + ' : ' + pre.desc + ' Lignes : ' + pre.lines.slice(0, 2).join(' | ') + (pre.id === 'black-gambits' ? ' | d4 d5 c4 e5 dxe5 d4 e3 Bb4+ Bd2 dxe3 Bxb4 exf2+ Ke2 fxg1=N+ (piège de Lasker)' : ''));
+      }
+      return out.join('\n');
+    }
+    async function coachBilan() {
+      if (S.coachRunning) return;
+      if (!S.username) {
+        toast('Indique d’abord ton pseudo chess.com.');
+        showView('home');
+        return;
+      }
+      S.coachRunning = true;
+      try {
+        showView('insights');
+        toast('Je réanalyse toutes tes parties, puis je les envoie à Clawd ✻');
+        const ctx = await CC.InsightsUI.runFull();
+        if (!ctx) {
+          toast('Aucune partie analysée : je ne peux pas encore faire le bilan.');
+          return;
+        }
+        await CC.ChatUI.ask(BILAN_PROMPT + gambitsText(), { fresh: true });
+      } catch (e) {
+        toast(CC.esc(e.message || String(e)));
+      } finally {
+        S.coachRunning = false;
+      }
+    }
+
     // API interne pour les modules « Mes faiblesses » et « Chat »
     CC.App = {
       S,
@@ -2219,6 +2262,7 @@
       sound: moveSound,
       playSound: (k) => Sound.play(k),
       applyBoardTheme,
+      coachBilan,
     };
     if (CC.InsightsUI) CC.InsightsUI.init(CC.App);
     if (CC.ChatUI) CC.ChatUI.init(CC.App);
@@ -2226,6 +2270,13 @@
     if (CC.RepUI) {
       CC.RepUI.init(CC.App);
       applyBoardTheme();
+    }
+    const coachBtn = document.getElementById('ins-coach');
+    if (coachBtn) coachBtn.addEventListener('click', coachBilan);
+    // index.html#coach=bilan : lance directement le bilan complet
+    if (/(^|[#&])coach=bilan\b/.test(location.hash)) {
+      setHash(S.username ? { u: S.username } : {});
+      setTimeout(coachBilan, 900);
     }
     // Chauffe aussi les moteurs parallèles (la toute première recherche de chaque moteur est lente)
     setTimeout(() => pool.warm(threadCount()).catch(() => {}), 1500);

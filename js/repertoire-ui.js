@@ -209,7 +209,7 @@
     html += '<div class="rep-cands" id="rep-cands"><p class="muted small"><span class="cc-spin">✻</span> Je cherche les coups possibles…</p></div>';
     setBody(
       html,
-      `<button class="btn btn-sm btn-primary" data-auto>✻ Créer depuis mes parties</button>${presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Répertoire conseillé</button>' : ''}${RP.undo && RP.undo.color === color ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : ''}`
+      `<button class="btn btn-sm btn-primary" data-auto>✻ Créer depuis mes parties</button>${presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Répertoires conseillés</button>' : ''}${RP.undo && RP.undo.color === color ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : ''}`
     );
     mood(mine && !rep ? 'thinking' : 'idle', 'bob');
     loadPositionData(fen, mine);
@@ -424,7 +424,7 @@
       html,
       (size ? '<button class="btn btn-sm btn-primary" data-start-review>Réviser' + (todo ? ' (' + todo + ')' : '') + '</button>' : '') +
         '<button class="btn btn-sm" data-edit>✏️ Modifier ici</button>' +
-        (presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Répertoire conseillé</button>' : '') +
+        (presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Répertoires conseillés</button>' : '') +
         (RP.undo && RP.undo.color === color ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : '')
     );
     mood(size ? 'happy' : 'meh', 'bob');
@@ -650,6 +650,67 @@
 
   /* ---------------- Répertoires tout prêts ---------------- */
   const presetFor = (color) => (CC.RepPresets || []).find((p) => p.color === color) || null;
+  const presetsFor = (color) => (CC.RepPresets || []).filter((p) => p.color === color);
+  /** Où en est ce pack dans ton répertoire : coups déjà identiques, différents, absents */
+  function presetState(pre) {
+    const d = R.data()[pre.color];
+    let same = 0;
+    let diff = 0;
+    let missing = 0;
+    const seen = new Set();
+    for (const line of pre.lines) {
+      const ch = new Chess();
+      for (const sn of line.split(' ')) {
+        const fb = ch.fen();
+        const mv = ch.move(sn);
+        if (!mv) break;
+        if (mv.color !== pre.color) continue;
+        const k = R.fenKey(fb);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        const e = d[k];
+        if (!e) missing++;
+        else if (e.uci === uciOf(mv)) same++;
+        else diff++;
+      }
+    }
+    return { same, diff, missing, total: seen.size };
+  }
+  function renderPresets() {
+    const list = presetsFor(RP.color);
+    let html = '<div class="rp-head"><b>Répertoires conseillés ' + side(RP.color) + '</b><button class="linkbtn" data-presets-close>Retour</button></div>';
+    html += '<p class="muted small">« Ajouter » complète ton répertoire sans toucher à tes coups. « Remplacer » met les coups du pack à la place des tiens là où ils diffèrent (tu peux annuler).</p>';
+    for (const pre of list) {
+      const st = presetState(pre);
+      const full = st.same === st.total;
+      html += '<div class="rp-card' + (pre.variant ? ' gambit' : '') + '"><div class="rp-title">' + (pre.variant ? '⚔️ ' : '📘 ') + CC.esc(pre.name) + '</div>' +
+        '<div class="rp-desc">' + CC.esc(pre.desc) + '</div>' +
+        '<div class="rp-meta">' + pre.lines.length + ' lignes · ' + st.total + ' coups à toi · ' +
+        (full ? '<b class="ok">déjà dans ton répertoire ✓</b>' : st.same + ' déjà identiques' + (st.diff ? ', <b>' + st.diff + ' différents des tiens</b>' : '') + (st.missing ? ', ' + st.missing + ' nouveaux' : '')) + '</div>' +
+        '<div class="rp-btns">' +
+        (st.missing && !full ? '<button class="btn btn-sm' + (pre.variant ? '' : ' btn-primary') + '" data-preset-add="' + pre.id + '">Ajouter</button>' : '') +
+        (st.diff ? '<button class="btn btn-sm' + (pre.variant ? ' btn-primary' : '') + '" data-preset-replace="' + pre.id + '">Remplacer mes coups</button>' : '') +
+        '<button class="btn btn-sm" data-preset-view="' + pre.id + '">Voir</button></div></div>';
+    }
+    setBody(html, '');
+    mood('thinking', 'bob');
+  }
+  function applyPreset(id, replace) {
+    const pre = (CC.RepPresets || []).find((p) => p.id === id);
+    if (!pre) return;
+    const snap = R.snapshot(pre.color);
+    const r = R.addPreset(pre, { replace });
+    if (!r.added && !r.replaced) {
+      app.toast('Rien à changer : ces coups sont déjà dans ton répertoire.');
+      return;
+    }
+    RP.undo = { color: pre.color, snap };
+    RP.presets = false;
+    RP.tab = 'tree';
+    RP.path = [];
+    app.toast(CC.esc(pre.name) + ' : ' + (r.added ? r.added + ' coups ajoutés' : '') + (r.added && r.replaced ? ', ' : '') + (r.replaced ? r.replaced + ' remplacés' : '') + '. <button class="linkbtn" data-undo>Annuler</button>');
+    renderTabs();
+  }
   function addPreset() {
     const pre = presetFor(RP.color);
     if (!pre) return;
@@ -1168,6 +1229,7 @@
     // Une seule fois : si le répertoire d'une couleur est vide, on y met le répertoire conseillé (annulable)
     // (un drapeau par répertoire : un nouveau répertoire conseillé s'ajoute aussi chez ceux qui avaient déjà le premier)
     for (const pre of CC.RepPresets || []) {
+      if (pre.variant) continue;
       const flag = 'cc.preset.auto.' + pre.id;
       const done = CC.store.get(flag, false) || (pre.id === 'black-e5-d5' && CC.store.get('cc.preset.auto', false));
       if (done) continue;
@@ -1282,7 +1344,36 @@
         return;
       }
       if (t.closest('[data-auto]')) return autoBuild();
-      if (t.closest('[data-preset]')) return addPreset();
+      if (t.closest('[data-preset]')) {
+        RP.presets = true;
+        return renderPresets();
+      }
+      if (t.closest('[data-presets-close]')) {
+        RP.presets = false;
+        return renderTab();
+      }
+      const pa = t.closest('[data-preset-add]');
+      if (pa) return applyPreset(pa.dataset.presetAdd, false);
+      const pr = t.closest('[data-preset-replace]');
+      if (pr) return applyPreset(pr.dataset.presetReplace, true);
+      const pv = t.closest('[data-preset-view]');
+      if (pv) {
+        const pre = (CC.RepPresets || []).find((p) => p.id === pv.dataset.presetView);
+        if (pre) {
+          const ch = new Chess();
+          const path = [];
+          for (const sn of pre.lines[0].split(' ')) {
+            const mv = ch.move(sn);
+            if (!mv) break;
+            path.push(uciOf(mv));
+          }
+          RP.presets = false;
+          RP.tab = 'build';
+          RP.path = path.slice(0, Math.min(path.length, 6));
+          renderTabs();
+        }
+        return;
+      }
       if (t.closest('[data-undo]')) return undo();
       if (t.closest('[data-hide-report]')) {
         RP.buildReport = null;

@@ -34,6 +34,11 @@
 
   /* ---------------- Périodes ---------------- */
   function periodInfo(kind, back) {
+    if (kind === 'all') {
+      // toutes les parties, depuis la création du compte (pas de période précédente à comparer)
+      if (back) return { all: true, months: [], from: 0, to: 0, label: '' };
+      return { all: true, months: ['all'], from: 0, to: Date.now() + 7 * 86400000, label: 'toutes tes parties' };
+    }
     const now = new Date();
     const span = kind === '3m' ? 3 : 1;
     const end = now.getMonth() - (kind === 'last' ? 1 : 0) - (back ? span : 0);
@@ -67,7 +72,7 @@
     const hit = B.cache[key];
     if (hit && Date.now() - hit.at < 120000) return hit.games;
     const archives = await CC.ChessCom.archives(app.S.username);
-    const urls = archives.filter((u) => info.months.some((m) => u.endsWith('/' + m)));
+    const urls = info.all ? archives : archives.filter((u) => info.months.some((m) => u.endsWith('/' + m)));
     const me = app.S.username.toLowerCase();
     let games = [];
     for (const u of urls) games = games.concat(await CC.ChessCom.month(u));
@@ -260,7 +265,7 @@
     const info = periodInfo(B.period);
     B.facts = factsFor(info);
     B.report = B.facts.length ? I.report(B.facts) : null;
-    const prevFacts = B.period === '3m' ? [] : factsFor(periodInfo(B.period, true));
+    const prevFacts = B.period === '3m' || B.period === 'all' ? [] : factsFor(periodInfo(B.period, true));
     B.prev = prevFacts.length >= 3 ? I.report(prevFacts) : null;
     B.prevLabel = periodInfo(B.period, true).label;
     renderBubble(info);
@@ -865,6 +870,16 @@
     return { n: r.n, label: info.label, text };
   };
   UI.isRunning = () => B.running;
+  /** Réanalyse toutes les parties (toutes périodes, toutes cadences) ; renvoie le contexte pour le coach */
+  UI.runFull = async function () {
+    if (B.running) stopBatch();
+    B.period = 'all';
+    B.tc = 'all';
+    renderAll();
+    await refreshCounts();
+    if (B.todo && B.todo.length) await runBatch();
+    return UI.context();
+  };
   /** Séries d'exercices tirées de tes erreurs (pour l'onglet Répertoire › Exercices) */
   UI.exerciseSets = function () {
     let r = B.report;

@@ -207,10 +207,12 @@
   };
 
   /** Ajoute un répertoire tout prêt (CC.RepPresets) sans toucher aux coups déjà choisis : une ligne en conflit est ignorée */
-  R.addPreset = function (pre) {
+  R.addPreset = function (pre, opts) {
     const d = R.data()[pre.color];
+    const replace = !!(opts && opts.replace); // true : les coups du pack remplacent les tiens
     let added = 0;
     let skipped = 0;
+    let replaced = 0;
     for (const line of pre.lines) {
       const ch = new Chess();
       const todo = [];
@@ -225,24 +227,26 @@
         if (mv.color !== pre.color) continue;
         const k = R.fenKey(fb);
         const uci = mv.from + mv.to + (mv.promotion || '');
-        if (d[k] && d[k].uci !== uci) {
+        if (d[k] && d[k].uci !== uci && !replace) {
           ok = false;
           break;
         }
-        if (!d[k]) todo.push({ k, uci, san: mv.san });
+        if (!d[k] || d[k].uci !== uci) todo.push({ k, uci, san: mv.san, swap: !!d[k] });
       }
       if (!ok) {
         skipped++;
         continue;
       }
       for (const x of todo) {
-        if (d[x.k]) continue;
-        d[x.k] = { uci: x.uci, san: x.san, t: Date.now(), src: 'conseillé' };
-        added++;
+        if (d[x.k] && d[x.k].uci === x.uci) continue;
+        if (d[x.k]) replaced++;
+        else added++;
+        d[x.k] = { uci: x.uci, san: x.san, t: Date.now(), src: pre.variant ? 'gambit' : 'conseillé' };
       }
     }
+    if (replaced) R.prune(pre.color); // les anciennes suites devenues inaccessibles disparaissent
     R.save();
-    return { added, skipped };
+    return { added, skipped, replaced };
   };
 
   /** Répertoire proposé à partir de tes coups habituels : [{ fen, key, uci, san, n, total, pts, sans }] */

@@ -668,6 +668,8 @@ select { background: var(--bg-deep); border: 1px solid var(--line); border-radiu
 .msg-bubble code { font-family: var(--mono); font-size: 13px; background: rgba(0, 0, 0, 0.06); padding: 1px 4px; border-radius: 3px; }
 .msg.bot .linkbtn { color: #b5573a; text-decoration: underline; }
 .msg-ctx { margin-top: 6px; font-size: 12px; opacity: 0.9; font-weight: 700; }
+.msg-bubble hr { border: 0; border-top: 1px solid rgba(0, 0, 0, 0.12); margin: 10px 0; }
+.msg-bubble .md-h { font-weight: 900; margin-top: 4px; }
 .typing { color: var(--accent); font: 700 13px var(--mono); }
 .typing.tool { color: #8a5a45; margin-top: 8px; }
 /* Cartes « modification du répertoire » faites par l'IA, dans la bulle de Clawd */
@@ -861,6 +863,16 @@ select { background: var(--bg-deep); border: 1px solid var(--line); border-radiu
 .tsec-ans { color: #8fd19e; font-weight: 900; }
 .tsec-op { color: var(--text-3); font-weight: 700; font-size: 12px; margin-left: 6px; }
 .tv-stem { margin-bottom: 2px; }
+
+/* Répertoires conseillés */
+.rp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 15px; }
+.rp-card { background: rgba(0, 0, 0, 0.16); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.rp-card.gambit { box-shadow: inset 3px 0 0 var(--accent); }
+.rp-title { font-weight: 900; font-size: 14.5px; }
+.rp-desc { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+.rp-meta { font-size: 12px; color: var(--text-3); }
+.rp-meta .ok { color: #8fd19e; }
+.rp-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
 
 /* =====================================================================
    Téléphone : appli plein écran (barre d'onglets en bas, échiquier toujours visible)

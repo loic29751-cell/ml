@@ -34,7 +34,7 @@ Clavier : `←` `→` coup précédent/suivant · `↑` `↓` début/fin · `Esp
 
 ## Mes faiblesses
 
-L'onglet **Faiblesses** analyse toutes tes parties d'une période (ce mois-ci, le mois dernier ou les 3 derniers mois) et en tire un rapport :
+L'onglet **Faiblesses** analyse toutes tes parties d'une période (ce mois-ci, le mois dernier, les 3 derniers mois ou **Tout**) et en tire un rapport :
 
 - **Séparé par cadence** : une puce par contrôle de temps que tu joues vraiment (5 min, 10 min, 3 | 2…). La vue « Toutes » compare les cadences côte à côte, et un clic sur une cadence affiche son rapport complet.
 - **Tes 3 priorités**, avec un chiffre, une explication et un conseil : zeitnot, pièces laissées en prise, tactiques adverses non vues, occasions manquées, finales, ouvertures, conversion d'un avantage, couleur.
@@ -42,6 +42,8 @@ L'onglet **Faiblesses** analyse toutes tes parties d'une période (ce mois-ci, l
 - **Tes 10 pires erreurs** : « Rejouer » ouvre la position en mode Réessayer, « Tout rejouer en exercices » les enchaîne.
 - **Propositions selon tes faiblesses** : pour chaque priorité, des exercices sur tes propres positions, des puzzles lichess du bon thème, et (pour les ouvertures) un bouton qui ajoute les bons coups à ton répertoire.
 - **Ton programme de la semaine** : un plan jour par jour (exercices, révision du répertoire, puzzles, parties à jouer) avec des cases à cocher.
+
+**✻ Bilan complet par Clawd** : un clic réanalyse toutes tes parties (toutes cadences, depuis la création de ton compte), puis envoie le rapport à Clawd dans le Chat. Il te répond avec tes 5 erreurs principales (exemples tirés de tes parties), les différences selon la cadence, des gambits vérifiés pour les Blancs et les Noirs, et un plan sur deux semaines. Le lien `index.html#coach=bilan` lance la même chose directement.
 
 Seules les nouvelles parties sont analysées : relance le bouton de temps en temps, les mois précédents restent en mémoire pour suivre ta progression (flèches ▲▼ comparées au mois d'avant).
 
@@ -63,6 +65,7 @@ L'onglet **Répertoire** gère tes ouvertures, avec les Blancs et avec les Noirs
 - **Construire** : joue tes coups sur l'échiquier. Pour chaque position tu vois les coups des maîtres (base lichess, % et résultats), l'évaluation Stockfish (★ = meilleur coup) et ce que tu joues dans tes parties. Les transpositions sont reconnues.
 - **Répertoire conseillé (Blancs)** : 1.e4 avec l'Italienne offensive (gambit Evans 4.b4 contre 3…Bc5, 4.Ng5 contre 3…Nf6), 3.Nxe5 contre la Petrov, la punition de 2…f6, 2.exd5 contre la Scandinave, l'Alapin (2.c3) contre la Sicilienne, et des réponses simples au reste.
 - **Répertoire conseillé (Noirs)** : un répertoire Noirs tout prêt et vérifié par Stockfish, 1…e5 contre 1.e4 (Italienne, Espagnole, Écossaise, 2.d4 exd4, dame sortie tôt avec Qh5 ou Qf3) et 1…d5 contre le reste. Chacun est ajouté automatiquement si ton répertoire de cette couleur est vide (bouton « Annuler » pour le retirer), et reste disponible en un clic.
+- **Packs de gambits (au choix)** : dans « 📘 Répertoires conseillés », « Ajouter » complète ton répertoire sans toucher à tes coups, « Remplacer mes coups » met les coups du pack à la place des tiens (bouton Annuler). Blancs : gambit Smith-Morra contre la Sicilienne et gambit Blackmar-Diemer contre 1…d5. Noirs : défense des deux cavaliers avec le gambit Polerio contre l'Italienne, et contre-gambit Albin contre 1.d4 d5 2.c4 (avec le piège de Lasker). Toutes les lignes sont vérifiées par Stockfish.
 - **Créer depuis mes parties** : Clawd reprend tes coups habituels des 3 derniers mois, les fait vérifier par Stockfish et remplace ceux qui sont douteux (bouton « Annuler » si ça ne te plaît pas).
 - **Réviser** : je joue les coups adverses, tu retrouves les tiens. Répétition espacée : un coup bien su revient dans 1, 3, 7, 16 jours…, un coup oublié revient tout de suite.
 - **Exercices** : tes propres erreurs en séries (pires erreurs, par faiblesse, par phase). Une fois le bon coup trouvé, **« Continuer la partie »** te laisse jouer la suite contre Stockfish.
