@@ -523,3 +523,100 @@
     }
   }
 })(window);
+
+/* L'essentiel : les 5 gambits les plus utiles par couleur d'après tes parties, avec seulement leurs lignes clés
+ * (le piège et la suite principale). Le « mode essentiel » de l'onglet Répertoire ne fait réviser que ceux-là. */
+(function (root) {
+  'use strict';
+  root.CC.RepEssentials = {
+    w: [
+      {
+        id: 'w-foie', name: 'Foie frit (Italienne 4.Ng5)', why: 'Ta ligne n°1 : 2…Nc6 3.Bc4 Nf6, 21 parties. Tout tape sur f7.',
+        lines: [
+          'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 Nxf7 Kxf7 Qf3+ Kg8 Bxd5+ Qxd5 Qxd5+ Be6 Qxe6#',
+          'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 Nxf7 Kxf7 Qf3+ Ke6 Nc3',
+          'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d6 Nxf7 Qe7 Nxh8',
+          'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Na5 Bb5+ c6 dxc6 bxc6 Be2',
+        ],
+      },
+      {
+        id: 'w-legal', name: 'Mat de Légal (contre …d6)', why: '2…d6 ou 3…d6 : 13 parties. Le sacrifice de la dame qui finit en mat.',
+        lines: [
+          'e4 e5 Nf3 Nc6 Bc4 d6 Nc3 Bg4 h3 Bh5 Nxe5 Bxd1 Bxf7+ Ke7 Nd5#',
+          'e4 e5 Nf3 Nc6 Bc4 d6 Nc3 Bg4 h3 Bh5 Nxe5 Nxe5 Qxh5 Nxc4 Qb5+ c6 Qxc4',
+          'e4 e5 Nf3 d6 Bc4 Bg4 Nc3 g6 Nxe5 Bxd1 Bxf7+ Ke7 Nd5#',
+        ],
+      },
+      {
+        id: 'w-petrov', name: 'Petrov : 3.Nxe5 et le piège Qe2', why: '2…Nf6 : 11 parties, ton plus mauvais score (36 %). Fini le 3.Bc4.',
+        lines: [
+          'e4 e5 Nf3 Nf6 Nxe5 Nxe4 Qe2 Nf6 Nc6+',
+          'e4 e5 Nf3 Nf6 Nxe5 d6 Nf3 Nxe4 Qe2 Be7 Qxe4',
+          'e4 e5 Nf3 Nf6 Nxe5 d6 Nf3 Nxe4 Qe2 Qe7 d3 Nf6 Bg5',
+        ],
+      },
+      {
+        id: 'w-damiano', name: 'Damiano : 3.Nxe5 contre 2…f6', why: 'Coup faible fréquent à ton niveau : sacrifice du cavalier et chasse au roi jusqu’au mat.',
+        lines: [
+          'e4 e5 Nf3 f6 Nxe5 fxe5 Qh5+ Ke7 Qxe5+ Kf7 Bc4+ Kg6 Qf5+ Kh6 d4+ g5 h4 Nf6 Qxg5#',
+          'e4 e5 Nf3 f6 Nxe5 fxe5 Qh5+ g6 Qxe5+ Qe7 Qxh8',
+          'e4 e5 Nf3 f6 Nxe5 Qe7 Nf3 Qxe4+ Be2',
+        ],
+      },
+      {
+        id: 'w-tennison', name: 'Gambit Tennison (contre 1…d5)', why: '1…d5 : 18 parties, ta 2e défense la plus fréquente. Bc4 + Ng5 sur f7, comme le foie frit.',
+        lines: [
+          'e4 d5 Nf3 dxe4 Ng5 Nf6 Bc4 Nc6 Bxf7+ Kd7 Ne6',
+          'e4 d5 Nf3 dxe4 Ng5 Nf6 Bc4 Nd5 Nxf7 Kxf7 Qh5+ g6 Qxd5+ Kg7 Qe5+ Kh6 d3+ e3 Bxe3+ g5 Qxg5#',
+          'e4 d5 Nf3 dxe4 Ng5 Nf6 Bc4 e6 Nc3 Be7 Ngxe4',
+        ],
+      },
+    ],
+    b: [
+      {
+        id: 'b-stafford', name: 'Gambit Stafford (contre 2.Nf3)', why: '2.Nf3 : 31 parties, ta pire ligne avant (2…Nc6, 20 %). Trois mats à connaître.',
+        lines: [
+          'e4 e5 Nf3 Nf6 Nxe5 Nc6 Nxc6 dxc6 d3 Bc5 Bg5 Nxe4 Bxd8 Bxf2+ Ke2 Bg4#',
+          'e4 e5 Nf3 Nf6 Nxe5 Nc6 Nxc6 dxc6 d3 Bc5 Be2 h5 O-O Ng4 h3 Qd6 hxg4 hxg4 e5 Qxe5 Bh6 Rxh6 Re1 Qh2+ Kf1 Qh1#',
+          'e4 e5 Nf3 Nf6 Nxe5 Nc6 Nxc6 dxc6 Nc3 Bc5 Bc4 Ng4 O-O Qh4 h3 Nxf2 Qf3 Nxh3+ Kh1 Nf2+ Kg1 Qh1#',
+          'e4 e5 Nf3 Nf6 Nxe5 Nc6 Nf3 Nxe4 d4 d5',
+        ],
+      },
+      {
+        id: 'b-englund', name: 'Gambit Englund (contre 1.d4)', why: 'Ton arme contre 1.d4 (73 % de points) avec le mat en c1.',
+        lines: [
+          'd4 e5 dxe5 Nc6 Nf3 Qe7 Bf4 Qb4+ Bd2 Qxb2 Bc3 Bb4 Qd2 Bxc3 Qxc3 Qc1#',
+          'd4 e5 dxe5 Nc6 Nf3 Qe7 Bf4 Qb4+ Bd2 Qxb2 Bc3 Bb4 Bxb4 Nxb4 Qc1 Qxc1#',
+          'd4 e5 dxe5 Nc6 Nf3 Qe7 Nc3 Nxe5 Nxe5 Qxe5',
+          'd4 e5 dxe5 Nc6 Bf4 Qe7 Nf3 Qb4+',
+        ],
+      },
+      {
+        id: 'b-traxler', name: 'Traxler (contre 3.Bc4 puis 4.Ng5)', why: '3.Bc4 : 12 parties, 8 % de points avant. Ici c’est toi qui attaques f2.',
+        lines: [
+          'e4 e5 Nf3 Nf6 Bc4 Nc6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Ke1 Qh4+ Ke2 Qf2+ Kd3 Nc5+ Kc3 Qd4#',
+          'e4 e5 Nf3 Nf6 Bc4 Nc6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Kf1 Qh4 Nxh8 Qf2#',
+          'e4 e5 Nf3 Nf6 Bc4 Nc6 Ng5 Bc5 Bxf7+ Ke7 Bb3 Nd4',
+          'e4 e5 Nf3 Nf6 Bc4 Nc6 d3 Bc5 O-O d6',
+        ],
+      },
+      {
+        id: 'b-dame', name: 'Dame sortie tôt : …Nc6 puis …Nd4', why: '2.Qh5, 2.Qf3 et la Viennoise : 24 parties. La fourchette …Nd4 gagne du matériel.',
+        lines: [
+          'e4 e5 Qh5 Nc6 Bc4 g6 Qf3 Nf6 Qb3 Nd4 Bxf7+ Ke7 Qc4 b5 Qd3 Kxf7',
+          'e4 e5 Qh5 Nc6 Bc4 g6 Qf3 Nf6 Ne2 Bg7 Nbc3 Nb4',
+          'e4 e5 Qf3 Nc6 Bc4 Nf6 Qb3 Nd4 Bxf7+ Ke7 Qd3 Kxf7',
+          'e4 e5 Nc3 Nc6 Bc4 Nf6 Qf3 Nd4 Qd1 Nxe4',
+        ],
+      },
+      {
+        id: 'b-centre', name: 'Partie du centre (contre 2.d4)', why: '2.d4 : 0 % de points en 4 parties. Tu prends, et sa dame se fait clouer.',
+        lines: [
+          'e4 e5 d4 exd4 Qxd4 Nc6 Qc3 Bb4',
+          'e4 e5 d4 exd4 Qxd4 Nc6 Qe3 Nf6 Nc3 Bb4 Bd2 O-O O-O-O Re8',
+          'e4 e5 d4 exd4 c3 d5 exd5 Qxd5 cxd4 Nf6',
+        ],
+      },
+    ],
+  };
+})(window);

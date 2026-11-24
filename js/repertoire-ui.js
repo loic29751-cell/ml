@@ -178,7 +178,7 @@
 
   /* =================== CONSTRUIRE =================== */
   function statsLine() {
-    const q = R.queue(RP.color);
+    const q = queueFor(RP.color);
     return `<div class="rep-stats"><span><b>${q.cards.length}</b> ${q.cards.length > 1 ? 'coups' : 'coup'} avec les ${side(RP.color)}</span><span><b>${q.due.length}</b> à réviser</span><span><b>${Math.min(q.fresh.length, Math.max(0, R.newLeft()))}</b> nouveaux</span></div>`;
   }
 
@@ -427,6 +427,57 @@
     return secHTML(nodes, path, path.length % 2 === 1, 0) + (budget.n <= 0 ? '<p class="muted small">… arbre coupé : avance dans une variante pour voir la suite.</p>' : '');
   }
 
+  /* ---------------- Mode essentiel : les 5 gambits les plus utiles par couleur ---------------- */
+  RP.focus = CC.store.get('cc.rep.focus', true);
+  const essentials = (color) => ((CC.RepEssentials || {})[color] || []);
+  /** Fiches de révision (couleur|position|coup) des lignes essentielles, quand le coup est bien celui de ton répertoire,
+   *  numérotées dans l'ordre : gambit 1 d'abord, ligne après ligne, coup après coup */
+  function focusSet(color) {
+    const set = new Map();
+    for (const e of essentials(color)) {
+      for (const line of e.lines) {
+        for (const m of R.line(line)) {
+          if (m.color !== color) continue;
+          const own = R.get(color, m.fenBefore);
+          const ck = R.cardKey(color, R.fenKey(m.fenBefore), m.uci);
+          if (own && own.uci === m.uci && !set.has(ck)) set.set(ck, set.size);
+        }
+      }
+    }
+    return set;
+  }
+  /** La file de révision, réduite à l'essentiel si le mode est actif */
+  function queueFor(color) {
+    const q = R.queue(color);
+    if (!RP.focus || !essentials(color).length) return q;
+    const fs2 = focusSet(color);
+    const keep = (c) => fs2.has(c.ck);
+    const fresh = q.fresh.filter(keep).sort((a, b) => fs2.get(a.ck) - fs2.get(b.ck));
+    return { cards: q.cards.filter(keep), due: q.due.filter(keep), fresh, focus: true };
+  }
+  function essentialsHTML(color) {
+    const list = essentials(color);
+    if (!list.length) return '';
+    const rows = list
+      .map((e, i) => {
+        const cards = lineCards(e.lines.map(sanPath));
+        const known = cards.filter((c) => c.srs && c.srs.box >= 2).length;
+        return (
+          '<div class="ess" data-ess="' + i + '" title="Réviser ce gambit"><span class="ess-n">' + (i + 1) + '</span><div class="ess-main"><b>' + CC.esc(e.name) + '</b><div class="ess-why">' + CC.esc(e.why) + '</div></div>' +
+          '<span class="ess-prog' + (known === cards.length && cards.length ? ' done' : '') + '" title="coups sus / coups à savoir">' + known + '/' + cards.length + '</span><span class="ol-play">▶</span></div>'
+        );
+      })
+      .join('');
+    return (
+      '<details class="og essentials" open><summary><span class="og-name">🎯 Tes 5 gambits essentiels</span><button class="og-play" data-ess-all>▶ Les 5</button></summary><div class="ess-list">' + rows + '</div>' +
+      '<div class="ess-foot muted small">' +
+      (RP.focus
+        ? 'Mode essentiel : la révision ne porte que sur ces 5 gambits, le reste attend « pour plus tard ». <button class="linkbtn" data-focus-off>Tout réviser</button>'
+        : 'Tout le répertoire est en révision. <button class="linkbtn" data-focus-on>🎯 Ne réviser que l’essentiel</button>') +
+      '</div></details>'
+    );
+  }
+
   /* ---------------- Favoris : pièges, ouvertures, lignes ou positions mis de côté pour les réviser ---------------- */
   const FAV_KEY = 'cc.rep.favs';
   const FAV_KIND = { trap: 'piège', line: 'ligne', group: 'ouverture', branch: 'position', drill: 'révision' };
@@ -592,20 +643,24 @@
       replies.slice(0, 6).forEach((m) => arrows.push({ from: m.from, to: m.to, color: BLUE }));
     }
     board.setArrows(arrows);
-    const q = R.queue(color);
+    const qAll = R.queue(color);
+    const q = queueFor(color);
     const size = R.size(color);
     const fresh = Math.min(q.fresh.length, Math.max(0, R.newLeft()));
     const op = A.identifyOpening(sansOf(RP.path).map((m) => m.san)).opening;
-    const groups = size ? openingGroups(color, q.cards) : [];
+    const groups = size ? openingGroups(color, qAll.cards) : [];
+    const focus = !!q.focus;
     let html = '';
     if (!size) {
       html += '<div class="tree-empty"><p><b>Ton répertoire ' + side(color) + ' est vide.</b></p><p class="muted">Ajoute le répertoire conseillé en un clic, crée-le depuis tes parties, ou joue tes coups dans « Construire ».</p></div>';
     } else {
       html += '<div class="tree-sum">' +
-        '<div><b>' + size + '</b><span>positions</span></div>' +
-        '<div><b>' + groups.reduce((t, g) => t + g.lines.length, 0) + '</b><span>lignes</span></div>' +
+        (focus
+          ? '<div><b>' + q.cards.length + '</b><span>coups à savoir</span></div><div><b>' + essentials(color).length + '</b><span>gambits</span></div>'
+          : '<div><b>' + size + '</b><span>positions</span></div><div><b>' + groups.reduce((t, g) => t + g.lines.length, 0) + '</b><span>lignes</span></div>') +
         '<div class="' + (q.due.length ? 'due' : '') + '"><b>' + q.due.length + '</b><span>à réviser</span></div>' +
         '<div><b>' + fresh + '</b><span>nouveaux</span></div></div>';
+      if (!RP.path.length) html += essentialsHTML(color);
       html += favBoxHTML(color);
       html += '<div class="rep-pos"><div class="rep-op">' + (op ? CC.esc(op.name) : RP.path.length ? 'Hors des ouvertures répertoriées' : 'Position de départ') + '</div><div class="rep-turn' + (mine ? ' me' : '') + '">' + (mine ? 'À toi de jouer' : 'Coup de l’adversaire') + '</div></div>';
       if (mine) {
@@ -617,6 +672,7 @@
           ? '<div class="rep-mine"><span>Réponses adverses préparées :</span> ' + replies.map((m) => san(m.san)).join(' ') + '</div>'
           : '<div class="rep-mine muted">Aucune réponse adverse préparée ici.</div>';
       }
+      const restStart = html.length;
       // Les pièges de mat (gambits « début de partie ») qui passent par cette position : un toucher = révision
       // Les mats d'abord ; les pièges sans mat forcé (gain de la dame, d'une tour…) dans une liste à part
       const all = trapsFor(color, RP.path);
@@ -657,13 +713,17 @@
             .join('') + '</div></details>';
       });
       html += '</div>';
+      if (focus && !RP.path.length) {
+        const rest = html.slice(restStart);
+        html = html.slice(0, restStart) + '<details class="og rest"' + (RP.restOpen ? ' open' : '') + '><summary><span class="og-name">📚 Tout le répertoire (pour plus tard)</span><span class="og-n">' + size + ' positions</span></summary><div class="rest-body">' + rest + '</div></details>';
+      }
     }
     const todo = q.due.length + fresh;
     setBody(
       html,
       (size && RP.path.length ? '<button class="btn btn-sm btn-primary" data-drill-here>▶ Réviser cette ligne</button>' : '') +
         (size && RP.path.length ? '<button class="btn btn-sm" data-fav-here>' + (isFav(color, 'branch:' + RP.path.join(' ')) ? '★ Favori' : '☆ Favori') + '</button>' : '') +
-        (size ? '<button class="btn btn-sm' + (RP.path.length ? '' : ' btn-primary') + '" data-start-review>' + (RP.path.length ? 'Tout réviser' : 'Réviser') + (todo ? ' (' + todo + ')' : '') + '</button>' : '') +
+        (size ? '<button class="btn btn-sm' + (RP.path.length ? '' : ' btn-primary') + '" data-start-review>' + (focus ? '🎯 Réviser l’essentiel' : RP.path.length ? 'Tout réviser' : 'Réviser') + (todo ? ' (' + todo + ')' : '') + '</button>' : '') +
         '<button class="btn btn-sm" data-edit>✏️ Modifier ici</button>' +
         (presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Mes répertoires</button>' : '') +
         (RP.undo && (RP.undo.both || RP.undo.color === color) ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : '')
@@ -980,7 +1040,7 @@
 
   /* =================== RÉVISER (répétition espacée) =================== */
   function renderReviewHome() {
-    const q = R.queue(RP.color);
+    const q = queueFor(RP.color);
     const fresh = Math.min(q.fresh.length, Math.max(0, R.newLeft()));
     show(CC.START_FEN, false, null);
     board.setArrows([]);
@@ -995,6 +1055,7 @@
         <div>${q.due.length + fresh > 1 ? 'coups à travailler' : 'coup à travailler'} avec les ${side(RP.color)}</div>
         <div class="muted small">${q.due.length} à revoir · ${fresh} nouveaux (${R.NEW_PER_DAY} par jour au maximum)${next ? ` · prochaine révision ${next}` : ''}</div>
       </div>
+${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 gambits (' + q.cards.length + ' coups à savoir). <button class="linkbtn" data-focus-off>Tout réviser</button></p>' : ''}
       <p class="rep-help">Je joue les coups de ton adversaire, tu retrouves les tiens. Un coup bien su revient de plus en plus tard (1, 3, 7, 16 jours…), un coup oublié revient tout de suite.</p>
       ${q.cards.length ? '' : '<p class="muted">Ton répertoire est vide : construis-le d’abord (onglet « Construire »), ou crée-le depuis tes parties.</p>'}`,
       (q.due.length + fresh ? '<button class="btn btn-primary btn-xl" data-start-review>Commencer la révision</button>' : '<button class="btn btn-wide" data-tab-go="build">Construire mon répertoire</button>') +
@@ -1003,7 +1064,7 @@
   }
 
   function startReview() {
-    const q = R.queue(RP.color);
+    const q = queueFor(RP.color);
     const cards = q.due.concat(q.fresh.slice(0, Math.max(0, R.newLeft()))).slice(0, 20);
     if (!cards.length) {
       app.toast('Rien à réviser pour l’instant 🎉');
@@ -1065,13 +1126,13 @@
     return sans.slice(-4).map((m) => (m.color === 'w' ? m.label + ' ' : '') + m.san).join(' ') || 'Ligne';
   }
   const sanPath = (line) => R.line(line).map((m) => m.uci);
-  function startLineReview(paths, title) {
+  function startLineReview(paths, title, max) {
     const cards = lineCards(paths);
     if (!cards.length) {
       app.toast('Aucun coup à toi dans cette ligne.');
       return;
     }
-    RP.drill = { cards: cards.slice(0, 60), i: 0, ok: 0, ko: 0, state: 'ask', title, src: { paths, title } };
+    RP.drill = { cards: cards.slice(0, max || 60), i: 0, ok: 0, ko: 0, state: 'ask', title, src: { paths, title } };
     RP.lastDrillSrc = RP.drill.src;
     RP.tab = 'review';
     renderTabs();
@@ -1891,6 +1952,24 @@
         RP.drill.i++;
         return showCard();
       }
+      const es = t.closest('[data-ess]');
+      if (es) {
+        const x = essentials(RP.color)[+es.dataset.ess];
+        if (x) startLineReview(x.lines.map(sanPath), '🎯 ' + x.name, 150);
+        return;
+      }
+      if (t.closest('[data-ess-all]')) {
+        e.preventDefault();
+        const paths = essentials(RP.color).flatMap((x) => x.lines.map(sanPath));
+        if (paths.length) startLineReview(paths, '🎯 Mes 5 gambits', 150);
+        return;
+      }
+      if (t.closest('[data-focus-off]') || t.closest('[data-focus-on]')) {
+        RP.focus = !!t.closest('[data-focus-on]');
+        CC.store.set('cc.rep.focus', RP.focus);
+        app.toast(RP.focus ? '🎯 Mode essentiel : tu ne révises que tes 5 gambits.' : 'Tout le répertoire est en révision.');
+        return renderTab();
+      }
       const dv = t.closest('[data-dv]');
       if (dv && RP.drill) return viewPly(+dv.dataset.dv, false);
       if (t.closest('[data-rv-live]') && RP.drill) return liveBoard();
@@ -1935,6 +2014,7 @@
       (e) => {
         if (e.target.matches && e.target.matches('details.traps-mat')) RP.trapsClosed = !e.target.open;
         if (e.target.matches && e.target.matches('details.traps-gain')) RP.gainsOpen = e.target.open;
+        if (e.target.matches && e.target.matches('details.rest')) RP.restOpen = e.target.open;
       },
       true
     );

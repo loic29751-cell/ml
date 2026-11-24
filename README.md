@@ -67,6 +67,10 @@ L'onglet **Répertoire** gère tes ouvertures, avec les Blancs et avec les Noirs
   - **Blancs** : 1.e4, 2.Nf3, 3.Bc4 et 4.Ng5 sur f7 (foie frit, mat en 3 si le roi recule en g8), mat de Légal contre …d6 et …Bg4, Damiano (3.Nxe5 contre 2…f6), 3.Nxe5 contre la Petrov (au lieu de 3.Bc4) avec le piège Qe2/Nc6+, Caro-Kann avec 2.Nf3 et 3.Nc3 (mat à l'étouffée Nd6#, piège Qh5/Bxf7#), 3.d4 contre 1…g6, Milner-Barry contre la Française. **En plus : gambit Tennison** contre 1…d5 (Bxf7+ et Ne6 gagnent la dame).
   - **Noirs** : 1…e5 et …Nc6 contre tout. Traxler (4…Bc5 contre 4.Ng5, …Bxf2+), défense contre le coup du berger (2.Qh5 Nc6 puis la fourchette …Nd4, plus jamais 2…Nf6 ?), 2…exd4 contre 2.d4, contre-gambit Falkbeer contre 2.f4, gambit Englund contre 1.d4 (…Qc1#), gambit From contre 1.f4 (…Bg3#), 1…d5 contre 1.Nf3. **En plus : gambit Stafford** contre 2.Nf3 (« Oh non, ma dame ! » …Bg4#, mat en h1, colonne h).
   - Attention : Traxler, Stafford, Englund et Tennison sont des gambits piégeux. Contre la bonne défense, Stockfish préfère l'adversaire ; à ton niveau, ils piègent souvent.
+- **🎯 Tes 5 gambits essentiels** (mode essentiel, actif par défaut) : pour commencer, la révision ne porte que sur 5 gambits par couleur, choisis d'après tes parties (les débuts qui reviennent le plus, et ceux où tu perdais le plus) :
+  - **Blancs** (63 coups à savoir) : foie frit, mat de Légal, Petrov 3.Nxe5 et le piège Qe2, Damiano, gambit Tennison.
+  - **Noirs** (80 coups à savoir) : gambit Stafford, gambit Englund, Traxler, dame sortie tôt (…Nc6 puis …Nd4), partie du centre.
+  - Les nouveaux coups arrivent gambit par gambit (le n°1 d'abord, ligne après ligne). Touche un gambit pour le réviser en entier, « ▶ Les 5 » pour tous. Le compteur (ex. 3/16) montre les coups sus. Le reste est rangé dans « 📚 Tout le répertoire (pour plus tard) » : « Tout réviser » le remet en révision, « 🎯 Ne réviser que l'essentiel » revient au mode essentiel.
 - **Mise à jour automatique** : au premier lancement, les anciens répertoires conseillés (Smith-Morra, Albin…) sont retirés et remplacés par ceux-ci. Les coups que tu as mis toi-même (Construire, tes parties, le chat) sont gardés et passent avant les packs. Bouton « Annuler » pour revenir en arrière.
 - **⚔️ Tes pièges de mat** (dans Mon répertoire) : chaque piège va jusqu'au mat (après une erreur naturelle de l'adversaire, vérifiée par Stockfish), et la révision finit sur « ♚ Échec et mat ! ». Les pièges qui gagnent seulement la dame ou une tour sont à part, dans « 💰 Pièges qui gagnent la dame ou une pièce ». Quand tu navigues dans l'arbre, seuls les pièges qui passent par la position affichée restent.
 - **⭐ Mes favoris** : l'étoile ☆ met de côté un piège, une ouverture ou une ligne ; « ☆ Favori » en bas garde la position affichée, et aussi la ligne que tu es en train de réviser. Les favoris (séparés Blancs/Noirs) se révisent un par un ou tous ensemble (« ▶ Tout réviser », et « ⭐ Réviser mes favoris » dans l'onglet Réviser). ✕ pour en retirer un.
@@ -136,7 +140,7 @@ js/insights-ui.js   « Mes faiblesses » : analyse en lot, rapport, graphiques
 js/chat.js          le chat privé avec Clawd
 js/chat-tools.js    les outils du chat pour modifier le répertoire
 js/puzzles.js       les puzzles (lichess) et ta progression
-js/rep-presets.js   ton répertoire (tes ouvertures + pièges de mat + Tennison/Stafford), vérifié par Stockfish
+js/rep-presets.js   ton répertoire (tes ouvertures + pièges de mat + Tennison/Stafford + tes 5 gambits essentiels), vérifié par Stockfish
 js/chesscom.js      l'API publique chess.com
 js/app.js           l'application
 js/vendor/          chess.js, Stockfish, base d'ouvertures

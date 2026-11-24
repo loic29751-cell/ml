@@ -1038,3 +1038,19 @@ select { background: var(--bg-deep); border: 1px solid var(--line); border-radiu
 .fav .tag { margin-left: 0; flex: none; }
 .fav-del { border: 0; background: none; cursor: pointer; color: var(--text-3); font-size: 14px; padding: 2px 6px; border-radius: 6px; flex: none; }
 .fav-del:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+
+/* ================= Répertoire : les 5 gambits essentiels ================= */
+.essentials { box-shadow: inset 3px 0 0 var(--accent); }
+.essentials summary .og-play { padding: 3px 10px; }
+.ess-list { padding: 0 10px 6px; display: flex; flex-direction: column; gap: 6px; }
+.ess { display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 8px; padding: 8px 10px; background: rgba(255, 255, 255, 0.04); }
+.ess:hover { background: rgba(217, 119, 87, 0.14); }
+.ess-n { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 13px; color: #fff; background: var(--accent); }
+.ess-main { flex: 1; min-width: 0; }
+.ess-main b { font-size: 14px; }
+.ess-why { font-size: 12px; color: var(--text-3); line-height: 1.35; margin-top: 1px; }
+.ess-prog { flex: none; font-size: 12px; font-weight: 900; color: var(--text-3); }
+.ess-prog.done { color: #6fd08a; }
+.ess-foot { padding: 0 12px 10px; }
+.rest > summary { color: var(--text-2); }
+.rest-body { padding: 4px 8px 10px; display: flex; flex-direction: column; gap: 10px; }
