@@ -1019,3 +1019,5 @@ select { background: var(--bg-deep); border: 1px solid var(--line); border-radiu
 @media (max-width: 700px) {
   .rep-nav .rv-arrow { min-width: 60px; padding: 6px 12px; font-size: 18px; }
 }
+.mate-banner { text-align: center; font-size: 22px; font-weight: 900; color: #fff; background: linear-gradient(135deg, var(--accent), #b8563a); border-radius: 12px; padding: 12px 10px; box-shadow: 0 3px 0 var(--accent-lo); }
+.traps-gain { box-shadow: inset 3px 0 0 #f2c14e; }

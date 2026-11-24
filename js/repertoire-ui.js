@@ -517,19 +517,26 @@
           : '<div class="rep-mine muted">Aucune réponse adverse préparée ici.</div>';
       }
       // Les pièges de mat (gambits « début de partie ») qui passent par cette position : un toucher = révision
-      const traps = trapsFor(color, RP.path);
-      RP.traps = traps;
-      if (traps.length) {
+      // Les mats d'abord ; les pièges sans mat forcé (gain de la dame, d'une tour…) dans une liste à part
+      const all = trapsFor(color, RP.path);
+      const mates = all.filter((x) => /#$/.test(x.line));
+      const gains = all.filter((x) => !/#$/.test(x.line));
+      RP.traps = mates.concat(gains);
+      const trapRow = (x, i) =>
+        '<div class="trap" data-drill-trap="' + i + '" title="Réviser ce piège"><div class="trap-h"><span class="ol-play">▶</span><b>' + CC.esc(x.name) + '</b>' +
+        (/#$/.test(x.line) ? '<span class="tag good">mat</span>' : '<span class="tag warn">' + CC.esc(x.gain || 'gain de matériel') + '</span>') +
+        (x.pack.extra ? '<span class="tag">gambit en plus</span>' : '') + '</div>' +
+        '<div class="trap-d">' + CC.esc(x.desc) + '</div><div class="trap-l">' + lineHTML(x.path) + '</div></div>';
+      if (mates.length) {
         html +=
-          '<details class="og traps"' + (RP.trapsClosed ? '' : ' open') + '><summary><span class="og-name">⚔️ Tes pièges de mat' + (RP.path.length ? ' depuis ici' : '') + '</span><span class="og-n">' + traps.length + '</span></summary><div class="trap-list">' +
-          traps
-            .map(
-              (x, i) =>
-                '<div class="trap" data-drill-trap="' + i + '" title="Réviser ce piège"><div class="trap-h"><span class="ol-play">▶</span><b>' + CC.esc(x.name) + '</b>' +
-                (/#$/.test(x.line) ? '<span class="tag good">mat</span>' : '') + (x.pack.extra ? '<span class="tag warn">gambit en plus</span>' : '') + '</div>' +
-                '<div class="trap-d">' + CC.esc(x.desc) + '</div><div class="trap-l">' + lineHTML(x.path) + '</div></div>'
-            )
-            .join('') +
+          '<details class="og traps traps-mat"' + (RP.trapsClosed ? '' : ' open') + '><summary><span class="og-name">⚔️ Tes pièges de mat' + (RP.path.length ? ' depuis ici' : '') + '</span><span class="og-n">' + mates.length + '</span></summary><div class="trap-list">' +
+          mates.map((x, i) => trapRow(x, i)).join('') +
+          '</div></details>';
+      }
+      if (gains.length) {
+        html +=
+          '<details class="og traps traps-gain"' + (RP.gainsOpen ? ' open' : '') + '><summary><span class="og-name">💰 Pièges qui gagnent la dame ou une pièce' + (RP.path.length ? ' depuis ici' : '') + '</span><span class="og-n">' + gains.length + '</span></summary><div class="trap-list">' +
+          gains.map((x, i) => trapRow(x, mates.length + i)).join('') +
           '</div></details>';
       }
       const tree = treeSections(color, RP.path);
@@ -1188,9 +1195,13 @@
     RP.drill = null;
     renderNav();
     const next = R.nextDueText(RP.color);
+    // la ligne finit par un mat : on le dit (et l'échiquier montre la position de mat)
+    const last = d.cards[d.cards.length - 1];
+    const after = last && R.step(last.fen, last.move.uci);
+    const mate = !!(after && new Chess(after.fen).in_checkmate());
     mood(d.ko ? 'happy' : 'star', 'jump');
     setBody(
-      `<div class="rep-big"><div class="rep-big-n">${d.ok}/${d.cards.length}</div><div>coups retrouvés du premier coup</div><div class="muted small">${next ? `Prochaine révision ${next}.` : ''}</div></div>
+      `${mate ? '<div class="mate-banner">♚ Échec et mat !</div>' : ''}<div class="rep-big"><div class="rep-big-n">${d.ok}/${d.cards.length}</div><div>coups retrouvés du premier coup</div><div class="muted small">${next ? `Prochaine révision ${next}.` : ''}</div></div>
       <p class="rep-help">${d.ko ? 'Les coups oubliés reviendront dans 10 minutes, puis demain.' : 'Sans faute ! Ton répertoire est bien en place.'}</p>`,
       d.src
         ? '<button class="btn btn-primary" data-drill-again>Recommencer cette ligne</button><button class="btn" data-tab-go="tree">Retour au répertoire</button>'
@@ -1800,7 +1811,8 @@
     $('#view-rep').addEventListener(
       'toggle',
       (e) => {
-        if (e.target.matches && e.target.matches('details.traps')) RP.trapsClosed = !e.target.open;
+        if (e.target.matches && e.target.matches('details.traps-mat')) RP.trapsClosed = !e.target.open;
+        if (e.target.matches && e.target.matches('details.traps-gain')) RP.gainsOpen = e.target.open;
       },
       true
     );
