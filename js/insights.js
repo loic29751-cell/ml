@@ -75,6 +75,9 @@
     const tc = tcInfo(game);
     const hasClock = !!tc && game.moves.some((x) => x.clock != null);
     const lowLimit = hasClock ? Math.max(15, tc.base * 0.1) : null;
+    // « Trop vite » : coup joué en moins de 1,7 % du temps de départ (10 s en 10 min) alors qu'il en restait plus de 30 %
+    const fastLimit = hasClock && tc.base >= 180 ? Math.max(3, tc.base * 0.017) : null;
+    let fastErr = 0;
     let clock = hasClock ? tc.base : null;
     const errors = [];
     let lowN = 0;
@@ -92,6 +95,7 @@
       const mv = game.moves[m.i];
       const before = clock;
       if (hasClock && mv.clock != null) clock = mv.clock;
+      const spent = hasClock && before != null && mv.clock != null ? before - mv.clock + tc.inc : null;
       if (!m.inBook) {
         maxWp = maxWp == null ? m.wpBest : Math.max(maxWp, m.wpBest);
         minWp = minWp == null ? m.wpBest : Math.min(minWp, m.wpBest);
@@ -107,6 +111,8 @@
       if (m.cls === 'mistake' || m.cls === 'blunder' || m.cls === 'miss') {
         err++;
         if (low) lowErr++;
+        const fast = fastLimit != null && spent != null && spent < fastLimit && before > tc.base * 0.3;
+        if (fast) fastErr++;
         const mo = I.motif(game, evals, review, m.i);
         errors.push({
           i: m.i,
@@ -115,6 +121,8 @@
           phase: m.phase,
           low,
           clock: before != null ? Math.round(before) : null,
+          spent: spent != null ? Math.round(spent) : null,
+          fast,
           motif: mo.k,
           piece: mo.piece || null,
           san: mv.san,
@@ -154,7 +162,10 @@
       phases: ph,
       maxWp: maxWp == null ? 50 : maxWp,
       minWp: minWp == null ? 50 : minWp,
-      time: hasClock ? { base: tc.base, lowN, lowAcc: lowN ? lowAcc / lowN : null, normAcc: normN ? normAcc / normN : null, lowErr, err } : null,
+      time: hasClock
+        ? { base: tc.base, lowN, lowAcc: lowN ? lowAcc / lowN : null, normAcc: normN ? normAcc / normN : null, lowErr, err, fastErr: fastLimit != null ? fastErr : null, fastLimit: fastLimit != null ? Math.round(fastLimit) : null, endShare: clock != null ? Math.max(0, clock) / tc.base : null }
+        : null,
+      how: me.result || null,
       errors,
       preset: preset || null,
       pgn: game.pgn || null,
@@ -262,6 +273,16 @@
       };
     }
 
+    // Vitesse : part des erreurs graves jouées trop vite, et temps restant en fin de partie (médiane)
+    let speed = null;
+    const sp = list.filter((f) => f.time && f.time.fastErr != null);
+    if (sp.length) {
+      const errN = sum(sp.map((f) => f.time.err));
+      const fastN = sum(sp.map((f) => f.time.fastErr));
+      const ends = sp.map((f) => f.time.endShare).filter((x) => x != null).sort((a, b) => a - b);
+      speed = { games: sp.length, err: errN, fast: fastN, share: errN ? fastN / errN : 0, endMed: ends.length ? ends[Math.floor(ends.length / 2)] : null, limit: Math.round(avg(sp.map((f) => f.time.fastLimit).filter(Boolean)) || 10) };
+    }
+    const pats = list.filter((f) => f.how === 'stalemate' && f.maxWp >= 85);
     const winning = list.filter((f) => f.maxWp >= 80);
     const thrown = winning.filter((f) => f.result !== 'win');
     const comebacks = list.filter((f) => f.minWp <= 20 && f.result === 'win');
@@ -302,6 +323,8 @@
       motifs,
       topHung,
       time,
+      speed,
+      pats,
       conversion: { winning: winning.length, thrown, comebacks },
       byColor: { w: colorStats(list.filter((f) => f.color === 'w')), b: colorStats(list.filter((f) => f.color === 'b')) },
       openings,
@@ -373,6 +396,31 @@
         text: `Ton adversaire se trompe, mais tu ne le punis pas toujours${mates ? ` (dont ${mates} ${plural(mates, 'mat raté', 'mats ratés')})` : ''}.`,
         advice: 'Quand ton adversaire joue un coup inattendu, demande-toi d’abord : « Qu’est-ce qu’il laisse sans défense ? Ai-je un échec, une capture ou une menace forte ? »',
         examples: ex((e) => ['missed-punish', 'missed-win', 'mate-missed'].includes(e.motif)),
+      });
+    }
+    if (r.speed && r.speed.err >= 6 && r.speed.share >= 0.25 && r.speed.endMed != null && r.speed.endMed >= 0.35) {
+      out.push({
+        key: 'speed',
+        score: r.speed.share * 100 + r.speed.endMed * 30,
+        title: 'Tu joues trop vite',
+        stat: pct(r.speed.share),
+        statSub: `de tes erreurs graves jouées en moins de ${r.speed.limit} s, alors qu’il te restait du temps`,
+        text: `Tu finis la moitié de tes parties avec encore ${pct(r.speed.endMed)} de ton temps à la pendule : ce temps-là ne sert à rien.`,
+        advice: 'Sur les coups qui comptent (une capture, un échec, une pièce attaquée, un coup adverse inattendu), prends 20 à 30 secondes : qu’est-ce que mon coup laisse en prise ? Que menace l’adversaire ?',
+        examples: ex((e) => e.fast),
+      });
+    }
+    if (r.pats && r.pats.length) {
+      const pk = new Set(r.pats.map((f) => f.key));
+      out.push({
+        key: 'stalemate',
+        score: 45 + r.pats.length * 15,
+        title: 'Le pat',
+        stat: String(r.pats.length),
+        statSub: `${plural(r.pats.length, 'partie gagnée d’avance finie nulle', 'parties gagnées d’avance finies nulles')} par pat`,
+        text: 'Le roi adverse n’avait plus aucune case et n’était pas en échec : c’est nul, alors que tu avais tout gagné.',
+        advice: 'Avec une dame en plus, avant chaque coup vérifie que le roi adverse garde au moins une case. Repousse-le au bord avec la dame, amène ton roi, puis mate.',
+        examples: ex((e) => pk.has(e.gameKey)),
       });
     }
     const pe = r.phase.endgame;
@@ -490,6 +538,8 @@
     L.push('Par phase : ' + PH.map((p) => `${PH_FR[p].toLowerCase()} ${r.phase[p] ? f1(r.phase[p].acc) + ' %' : 'n/a'}`).join(', ') + '.');
     if (r.motifs.length) L.push('Erreurs graves : ' + r.motifs.map((m) => `${m.label.toLowerCase()} ${m.n}`).join(', ') + '.');
     if (r.time) L.push(`Zeitnot : ${pct(r.time.lowShare)} des erreurs graves ; précision ${f1(r.time.accLow)} % en zeitnot contre ${f1(r.time.accNorm)} %.`);
+    if (r.speed && r.speed.err) L.push(`Vitesse : ${pct(r.speed.share)} des erreurs graves jouées en moins de ${r.speed.limit} s avec plus de 30 % du temps ; temps restant en fin de partie (médiane) ${r.speed.endMed != null ? pct(r.speed.endMed) : 'n/a'}.`);
+    if (r.pats && r.pats.length) L.push(`Pat : ${r.pats.length} partie(s) gagnante(s) finie(s) nulle(s) par pat.`);
     if (r.weaknesses.length) L.push('Faiblesses : ' + r.weaknesses.map((w) => `${w.title} (${w.stat} ${w.statSub})`).join(' ; ') + '.');
     if (r.strengths.length) L.push('Points forts : ' + r.strengths.join(' ; ') + '.');
     return L.join('\n');
@@ -514,6 +564,8 @@
         `Temps : ${pct(r.time.lowShare)} des erreurs graves commises avec moins de 10 % du temps ; précision en zeitnot ${f1(r.time.accLow)} % contre ${f1(r.time.accNorm)} % sinon ; ${r.time.gamesLow} parties sur ${r.time.games} avec un passage en zeitnot.`
       );
     }
+    if (r.speed && r.speed.err) L.push(`Vitesse : ${pct(r.speed.share)} des erreurs graves jouées en moins de ${r.speed.limit} s alors qu’il restait plus de 30 % du temps ; temps restant en fin de partie (médiane) : ${r.speed.endMed != null ? pct(r.speed.endMed) : 'n/a'}.`);
+    if (r.pats && r.pats.length) L.push(`Pat : ${r.pats.length} partie(s) gagnante(s) finie(s) nulle(s) par pat.`);
     L.push(`Conversion : ${r.conversion.winning} parties avec une position gagnante, dont ${r.conversion.thrown.length} non gagnées. Remontées gagnées : ${r.conversion.comebacks.length}.`);
     if (r.openings.length) {
       L.push('Ouvertures (couleur, parties, score, précision) :');

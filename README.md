@@ -10,6 +10,15 @@ Il faut seulement une connexion internet pour récupérer les parties sur chess.
 Astuce : ajoute la page à tes favoris. Ton pseudo est mémorisé : à chaque ouverture, tes dernières parties s'affichent directement.
 Tu peux aussi ouvrir `index.html#u=TonPseudo` pour charger un pseudo précis.
 
+## Sur téléphone
+
+L'appli est pensée pour le pouce, comme les applis d'échecs :
+
+- **Parties** : une fois tes parties chargées, le formulaire se range et la liste remonte (8 parties visibles d'un coup). « Changer » le rouvre pour un autre pseudo, un lien ou un PGN.
+- **Notifications en haut de l'écran** : elles ne cachent plus les boutons du bas, et celles avec **Annuler** restent 6 secondes (le bouton marche vraiment).
+- **Répertoire** : sous l'échiquier, la barre **⏮ ◀ ▶ ⇅** et le choix **Blancs / Noirs**. **▶** avance d'un coup en suivant ton répertoire (ton coup, ou la réponse adverse la plus préparée) : tu peux parcourir une ouverture au pouce, sans viser les coups. Les chiffres tiennent sur une ligne et les boutons du bas aussi (icônes ✏️ Modifier, 📘 Mes répertoires, ↶ Annuler, ☆ Favori), pour laisser la place à tes gambits. Une longue ligne défile au-dessus de l'échiquier sans élargir la page.
+- **Faiblesses** : les périodes tiennent dans l'écran (Ce mois · Mois dernier · 3 mois · Tout).
+
 ## Envoyer une partie
 
 | Méthode | Comment |
@@ -37,7 +46,9 @@ Clavier : `←` `→` coup précédent/suivant · `↑` `↓` début/fin · `Esp
 L'onglet **Faiblesses** analyse toutes tes parties d'une période (ce mois-ci, le mois dernier, les 3 derniers mois ou **Tout**) et en tire un rapport :
 
 - **Séparé par cadence** : une puce par contrôle de temps que tu joues vraiment (5 min, 10 min, 3 | 2…). La vue « Toutes » compare les cadences côte à côte, et un clic sur une cadence affiche son rapport complet.
-- **Tes 3 priorités**, avec un chiffre, une explication et un conseil : zeitnot, pièces laissées en prise, tactiques adverses non vues, occasions manquées, finales, ouvertures, conversion d'un avantage, couleur.
+- **Tes 3 priorités**, avec un chiffre, une explication et un conseil : zeitnot, pièces laissées en prise, tactiques adverses non vues, occasions manquées, finales, ouvertures, conversion d'un avantage, couleur, et aussi :
+  - **Tu joues trop vite** : la part de tes erreurs graves jouées en quelques secondes (moins de 10 s en 10 min) alors qu'il te restait plus de 30 % de ton temps, et le temps qui te reste en fin de partie ;
+  - **Le pat** : les parties gagnées d'avance (une dame de plus…) qui finissent nulles par pat.
 - **Le détail** : précision partie par partie, précision par phase, origine des erreurs, gestion du temps, ouvertures, résultats par couleur.
 - **Tes 10 pires erreurs** : « Rejouer » ouvre la position en mode Réessayer, « Tout rejouer en exercices » les enchaîne.
 - **Propositions selon tes faiblesses** : pour chaque priorité, des exercices sur tes propres positions, des puzzles lichess du bon thème, et (pour les ouvertures) un bouton qui ajoute les bons coups à ton répertoire.
@@ -70,6 +81,7 @@ L'onglet **Répertoire** gère tes ouvertures, avec les Blancs et avec les Noirs
 - **🎯 Tes 5 gambits essentiels** (mode essentiel, actif par défaut) : pour commencer, la révision ne porte que sur 5 gambits par couleur, choisis d'après tes parties (les débuts qui reviennent le plus, et ceux où tu perdais le plus) :
   - **Blancs** (63 coups à savoir) : foie frit, mat de Légal, Petrov 3.Nxe5 et le piège Qe2, Damiano, gambit Tennison.
   - **Noirs** (80 coups à savoir) : gambit Stafford, gambit Englund, Traxler, dame sortie tôt (…Nc6 puis …Nd4), partie du centre.
+  - Le n°1 de chaque couleur porte **⭐ le mieux adapté** : c'est le gambit qui colle à ce que tes adversaires jouent le plus. Avec les Blancs, leur suite n°1 est 1…e5, 2…Nc6, 3…Nf6 → **foie frit**. Avec les Noirs, après 1…e5 leur coup n°1 est 2.Nf3 (40 %), ta pire ligne avant → **Stafford**.
   - Les nouveaux coups arrivent gambit par gambit (le n°1 d'abord, ligne après ligne). Touche un gambit pour le réviser en entier, « ▶ Les 5 » pour tous. Le compteur (ex. 3/16) montre les coups sus. Le reste est rangé dans « 📚 Tout le répertoire (pour plus tard) » : « Tout réviser » le remet en révision, « 🎯 Ne réviser que l'essentiel » revient au mode essentiel.
 - **Mise à jour automatique** : au premier lancement, les anciens répertoires conseillés (Smith-Morra, Albin…) sont retirés et remplacés par ceux-ci. Les coups que tu as mis toi-même (Construire, tes parties, le chat) sont gardés et passent avant les packs. Bouton « Annuler » pour revenir en arrière.
 - **⚔️ Tes pièges de mat** (dans Mon répertoire) : chaque piège va jusqu'au mat (après une erreur naturelle de l'adversaire, vérifiée par Stockfish), et la révision finit sur « ♚ Échec et mat ! ». Les pièges qui gagnent seulement la dame ou une tour sont à part, dans « 💰 Pièges qui gagnent la dame ou une pièce ». Quand tu navigues dans l'arbre, seuls les pièges qui passent par la position affichée restent.

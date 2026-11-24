@@ -589,6 +589,8 @@
     conversion: 'quand tu es mieux, échanger les pièces et simplifier',
     color: 'jouer une ouverture que tu comprends avec cette couleur',
     blunders: 'faire un dernier contrôle avant de lâcher la pièce',
+    speed: 'prendre 20 secondes sur chaque coup important',
+    stalemate: 'avec une dame en plus, laisser une case au roi adverse',
   };
   function weekKey() {
     const d = new Date();

@@ -197,7 +197,7 @@
     t.innerHTML = msg;
     t.classList.add('show');
     clearTimeout(S.toastTimer);
-    S.toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+    S.toastTimer = setTimeout(() => t.classList.remove('show'), /<button/.test(msg) ? 6000 : 3000);
   }
   function saveSettings() {
     CC.store.set('cc.settings', S.settings);
@@ -328,6 +328,8 @@
       await loadMoreGames(25);
       renderGames();
       loadProfile(name);
+      document.body.classList.add('has-games');
+      document.body.classList.remove('show-hero');
       setHash({ u: name });
       if (!S.games.length) hero(`Aucune partie trouvée pour <b>${CC.esc(name)}</b>. Joue une partie et reviens me voir !`, 'meh');
       else hero(`J’ai trouvé tes parties, <b>${CC.esc(displayName())}</b> ! Choisis-en une et je te fais le bilan coup par coup.`, 'happy', 'jump');
@@ -337,6 +339,7 @@
       }
     } catch (e) {
       $('#games-card').hidden = true;
+      document.body.classList.remove('has-games');
       hero(
         e.code === 'notfound'
           ? `Je ne trouve pas <b>${CC.esc(name)}</b> sur chess.com 🤔 Vérifie l’orthographe du pseudo.`
@@ -400,7 +403,8 @@
       `<div class="prof-avatar">${p.avatar ? `<img src="${CC.esc(p.avatar)}" alt="">` : '<img src="assets/pieces/wP.svg" alt="" class="pawn">'}</div>` +
       `<div class="prof-main"><div class="prof-name">${p.title ? `<span class="title-badge">${CC.esc(p.title)}</span>` : ''}${CC.esc(displayName())}</div>` +
       `<div class="prof-ratings">${items.map(([k, v]) => `<span class="rating-chip">${TIME_ICON[k]}<span>${TIME_FR[k]}</span><b>${v}</b></span>`).join('')}</div></div>` +
-      (p.url ? `<a class="btn btn-ghost" href="${CC.esc(p.url)}" target="_blank" rel="noopener">Profil chess.com ↗</a>` : '');
+      (p.url ? `<a class="btn btn-ghost" href="${CC.esc(p.url)}" target="_blank" rel="noopener">Profil chess.com ↗</a>` : '') +
+      '<button class="btn btn-sm prof-change" data-act="change-user" type="button" title="Autre pseudo, lien ou PGN">Changer</button>';
   }
 
   function filteredGames() {
@@ -1843,6 +1847,14 @@
       if (!row || row.classList.contains('disabled')) return;
       const g = S.games.find((x) => CC.ChessCom.gameId(x.url) === row.dataset.id);
       if (g) openChessComGame(g);
+    });
+    $('#profile').addEventListener('click', (e) => {
+      if (!e.target.closest('[data-act="change-user"]')) return;
+      document.body.classList.toggle('show-hero');
+      if (document.body.classList.contains('show-hero')) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(() => $('#in-user').focus(), 250);
+      }
     });
     $('#btn-last').addEventListener('click', () => {
       const g = filteredGames().find((x) => !x.rules || x.rules === 'chess');

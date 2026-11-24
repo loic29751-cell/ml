@@ -531,7 +531,7 @@
   root.CC.RepEssentials = {
     w: [
       {
-        id: 'w-foie', name: 'Foie frit (Italienne 4.Ng5)', why: 'Ta ligne n°1 : 2…Nc6 3.Bc4 Nf6, 21 parties. Tout tape sur f7.',
+        id: 'w-foie', name: 'Foie frit (Italienne 4.Ng5)', best: true, why: 'Leur suite la plus jouée : 1…e5 (59 % ce mois-ci), puis 2…Nc6, puis 3…Nf6. Tout tape sur f7.',
         lines: [
           'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 Nxf7 Kxf7 Qf3+ Kg8 Bxd5+ Qxd5 Qxd5+ Be6 Qxe6#',
           'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 Nxf7 Kxf7 Qf3+ Ke6 Nc3',
@@ -574,7 +574,7 @@
     ],
     b: [
       {
-        id: 'b-stafford', name: 'Gambit Stafford (contre 2.Nf3)', why: '2.Nf3 : 31 parties, ta pire ligne avant (2…Nc6, 20 %). Trois mats à connaître.',
+        id: 'b-stafford', name: 'Gambit Stafford (contre 2.Nf3)', best: true, why: 'Après 1…e5, 2.Nf3 est leur coup n°1 (40 %) et c’était ta pire ligne (20 % des points avec 2…Nc6). Trois mats à connaître.',
         lines: [
           'e4 e5 Nf3 Nf6 Nxe5 Nc6 Nxc6 dxc6 d3 Bc5 Bg5 Nxe4 Bxd8 Bxf2+ Ke2 Bg4#',
           'e4 e5 Nf3 Nf6 Nxe5 Nc6 Nxc6 dxc6 d3 Bc5 Be2 h5 O-O Ng4 h3 Qd6 hxg4 hxg4 e5 Qxe5 Bh6 Rxh6 Re1 Qh2+ Kf1 Qh1#',

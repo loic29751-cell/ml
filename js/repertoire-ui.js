@@ -140,23 +140,40 @@
     const nav = $('#rep-nav');
     const browse = RP.tab === 'build' || RP.tab === 'tree';
     const drill = RP.tab === 'review' && RP.drill && RP.drill.cards[RP.drill.i];
-    nav.hidden = !browse && !drill;
+    let html = '';
     if (drill) {
       const d = RP.drill;
       const c = d.cards[d.i];
       const at = d.view == null ? c.path.length : d.view;
-      nav.innerHTML =
+      html =
         '<button class="btn btn-sm rv-arrow" data-nav="rv-back" title="Coup précédent (←)"' + (at > 0 ? '' : ' disabled') + '>◀</button>' +
         '<button class="btn btn-sm rv-arrow" data-nav="rv-fwd" title="' + (d.view == null ? (d.state === 'ask' ? 'Montre-moi le coup (→)' : 'Coup suivant (→)') : 'Avancer (→)') + '">▶</button>' +
         '<span class="rv-where">' + (d.view == null ? (d.state === 'done' ? 'Coup trouvé' : 'À toi de jouer') : 'Tu revois le coup ' + at + ' sur ' + c.path.length) + '</span>' +
         '<button class="btn btn-sm" data-nav="flip" title="Retourner l’échiquier">⇅</button>';
-    } else if (browse && !nav.querySelector('[data-nav="start"]')) {
-      nav.innerHTML =
-        '<button class="btn btn-sm" data-nav="start" title="Début (↑)">⏮ Début</button>' +
-        '<button class="btn btn-sm" data-nav="back" title="Coup précédent (←)">◀ Retour</button>' +
-        '<button class="btn btn-sm" data-nav="flip" title="Retourner l’échiquier">⇅ Retourner</button>';
+    } else if (browse) {
+      html =
+        '<button class="btn btn-sm nav-ic" data-nav="start" title="Début (↑)" aria-label="Début">⏮<span class="nl"> Début</span></button>' +
+        '<button class="btn btn-sm nav-ic" data-nav="back" title="Coup précédent (←)" aria-label="Coup précédent">◀<span class="nl"> Retour</span></button>' +
+        '<button class="btn btn-sm nav-ic" data-nav="fwd" title="Coup suivant de ton répertoire (→)" aria-label="Coup suivant">▶<span class="nl"> Suivant</span></button>' +
+        '<button class="btn btn-sm nav-ic" data-nav="flip" title="Retourner l’échiquier" aria-label="Retourner l’échiquier">⇅<span class="nl"> Retourner</span></button>';
+    }
+    // Blancs / Noirs sous l'échiquier : sur téléphone, il remplace l'en-tête du panneau (caché). Pas pendant une révision.
+    if (!drill) {
+      html +=
+        '<div class="seg nav-color" role="group" aria-label="Couleur">' +
+        ['w', 'b'].map((c) => '<button class="seg-btn' + (RP.color === c ? ' active' : '') + '" data-color="' + c + '"><img src="assets/pieces/' + c + 'K.svg" alt="">' + (c === 'w' ? 'Blancs' : 'Noirs') + '</button>').join('') +
+        '</div>';
+    }
+    nav.hidden = false;
+    nav.classList.toggle('only-color', !browse && !drill);
+    if (nav.dataset.sig !== html) {
+      nav.dataset.sig = html;
+      nav.innerHTML = html;
     }
   }
+  /** Bouton secondaire : icône + libellé (sur téléphone, le libellé disparaît et reste en infobulle) */
+  const ib = (attr, icon, label, extra) =>
+    '<button class="btn btn-sm ib' + (extra ? ' ' + extra : '') + '" ' + attr + ' title="' + label + '" aria-label="' + label + '"><span class="ib-i">' + icon + '</span><span class="ib-l"> ' + label + '</span></button>';
   function renderTab() {
     const browse = RP.tab === 'build' || RP.tab === 'tree';
     renderNav();
@@ -223,7 +240,7 @@
     html += '<div class="rep-cands" id="rep-cands"><p class="muted small"><span class="cc-spin">✻</span> Je cherche les coups possibles…</p></div>';
     setBody(
       html,
-      `<button class="btn btn-sm btn-primary" data-auto>✻ Créer depuis mes parties</button>${presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Mes répertoires</button>' : ''}${RP.undo && (RP.undo.both || RP.undo.color === color) ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : ''}`
+      `<button class="btn btn-sm btn-primary" data-auto>✻ Créer depuis mes parties</button>${presetFor(color) ? ib('data-preset', '📘', 'Mes répertoires') : ''}${RP.undo && (RP.undo.both || RP.undo.color === color) ? ib('data-undo', '↶', 'Annuler le dernier changement') : ''}`
     );
     mood(mine && !rep ? 'thinking' : 'idle', 'bob');
     loadPositionData(fen, mine);
@@ -463,7 +480,7 @@
         const cards = lineCards(e.lines.map(sanPath));
         const known = cards.filter((c) => c.srs && c.srs.box >= 2).length;
         return (
-          '<div class="ess" data-ess="' + i + '" title="Réviser ce gambit"><span class="ess-n">' + (i + 1) + '</span><div class="ess-main"><b>' + CC.esc(e.name) + '</b><div class="ess-why">' + CC.esc(e.why) + '</div></div>' +
+          '<div class="ess" data-ess="' + i + '" title="Réviser ce gambit"><span class="ess-n">' + (i + 1) + '</span><div class="ess-main"><b>' + CC.esc(e.name) + '</b>' + (e.best ? ' <span class="ess-best">⭐ le mieux adapté</span>' : '') + '<div class="ess-why">' + CC.esc(e.why) + '</div></div>' +
           '<span class="ess-prog' + (known === cards.length && cards.length ? ' done' : '') + '" title="coups sus / coups à savoir">' + known + '/' + cards.length + '</span><span class="ol-play">▶</span></div>'
         );
       })
@@ -721,12 +738,16 @@
     const todo = q.due.length + fresh;
     setBody(
       html,
-      (size && RP.path.length ? '<button class="btn btn-sm btn-primary" data-drill-here>▶ Réviser cette ligne</button>' : '') +
-        (size && RP.path.length ? '<button class="btn btn-sm" data-fav-here>' + (isFav(color, 'branch:' + RP.path.join(' ')) ? '★ Favori' : '☆ Favori') + '</button>' : '') +
-        (size ? '<button class="btn btn-sm' + (RP.path.length ? '' : ' btn-primary') + '" data-start-review>' + (focus ? '🎯 Réviser l’essentiel' : RP.path.length ? 'Tout réviser' : 'Réviser') + (todo ? ' (' + todo + ')' : '') + '</button>' : '') +
-        '<button class="btn btn-sm" data-edit>✏️ Modifier ici</button>' +
-        (presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Mes répertoires</button>' : '') +
-        (RP.undo && (RP.undo.both || RP.undo.color === color) ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : '')
+      (size && RP.path.length ? '<button class="btn btn-sm btn-primary" data-drill-here>▶ Réviser<span class="pl"> cette ligne</span></button>' : '') +
+        (size && RP.path.length ? ib('data-fav-here', isFav(color, 'branch:' + RP.path.join(' ')) ? '★' : '☆', 'Favori') : '') +
+        (size
+          ? RP.path.length
+            ? ib('data-start-review', '🎯' + (todo ? '<small>' + todo + '</small>' : ''), (focus ? 'Réviser l’essentiel' : 'Tout réviser') + (todo ? ' (' + todo + ')' : ''))
+            : '<button class="btn btn-sm btn-primary" data-start-review>' + (focus ? '🎯 Réviser l’essentiel' : 'Réviser') + (todo ? ' (' + todo + ')' : '') + '</button>'
+          : '') +
+        ib('data-edit', '✏️', 'Modifier ici') +
+        (presetFor(color) ? ib('data-preset', '📘', 'Mes répertoires') : '') +
+        (RP.undo && (RP.undo.both || RP.undo.color === color) ? ib('data-undo', '↶', 'Annuler le dernier changement') : '')
     );
     mood(size ? 'happy' : 'meh', 'bob');
   }
@@ -845,6 +866,24 @@
     box.innerHTML = html;
   }
 
+  /** Changer de couleur (en-tête du panneau, ou sous l'échiquier sur téléphone) */
+  function setColor(c) {
+    if (!c || c === RP.color) return;
+    RP.color = c;
+    CC.store.set('cc.rep.color', RP.color);
+    RP.path = [];
+    RP.drill = null;
+    renderTabs();
+  }
+  /** ▶ : un coup plus loin dans ton répertoire (ton coup, ou la réponse adverse la plus préparée, comme dans l'arbre) */
+  function goForward() {
+    const nodes = subtree(RP.color, curFen(), 40, new Set(), { n: 600 }) || [];
+    if (!nodes.length) {
+      app.toast('Fin de ta préparation ici.');
+      return;
+    }
+    goPath(RP.path.concat(nodes[0].uci), true);
+  }
   function goPath(path, animate) {
     RP.path = path.slice();
     if (RP.tab === 'tree') renderTree(animate);
@@ -1787,22 +1826,20 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
     });
     $('#rep-color').addEventListener('click', (e) => {
       const b = e.target.closest('.seg-btn');
-      if (!b || b.dataset.v === RP.color) return;
-      RP.color = b.dataset.v;
-      CC.store.set('cc.rep.color', RP.color);
-      RP.path = [];
-      RP.drill = null;
-      renderTabs();
+      if (b) setColor(b.dataset.v);
     });
     $('#rep-line').addEventListener('click', (e) => {
       const b = e.target.closest('[data-ply]');
       if (b) goPath(RP.path.slice(0, +b.dataset.ply), false);
     });
     $('#rep-nav').addEventListener('click', (e) => {
+      const cb = e.target.closest('[data-color]');
+      if (cb) return setColor(cb.dataset.color);
       const b = e.target.closest('[data-nav]');
       if (!b) return;
       if (b.dataset.nav === 'rv-back') return stepBack();
       if (b.dataset.nav === 'rv-fwd') return stepForward();
+      if (b.dataset.nav === 'fwd') return goForward();
       if (b.dataset.nav === 'start') goPath([], false);
       else if (b.dataset.nav === 'back') goPath(RP.path.slice(0, -1), true);
       else if (b.dataset.nav === 'flip') {
@@ -2040,6 +2077,9 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         goPath(RP.path.slice(0, -1), true);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goForward();
       } else if (e.key === 'ArrowUp' || e.key === 'Home') {
         e.preventDefault();
         goPath([], false);

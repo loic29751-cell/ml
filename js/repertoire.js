@@ -425,6 +425,8 @@
     time: [{ label: 'Puzzle Storm (vitesse)', url: 'https://lichess.org/storm' }, LI('short', 'Puzzles courts')],
     color: [LI('opening', 'Tactiques d’ouverture')],
     blunders: [LI('hangingPiece', 'Pièces en prise'), LI('defensiveMove', 'Coups de défense')],
+    speed: [LI('long', 'Puzzles longs (prendre son temps)'), LI('hangingPiece', 'Pièces en prise')],
+    stalemate: [{ label: 'Mats de base (lichess)', url: 'https://lichess.org/practice' }, LI('queenEndgame', 'Finales de dame')],
   };
   R.editorUrl = (fen) => 'https://lichess.org/editor/' + fen.replace(/ /g, '_');
 })(window);
