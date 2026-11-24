@@ -944,14 +944,18 @@
   UI.init = function (a) {
     app = a;
     // Une seule fois : si le répertoire d'une couleur est vide, on y met le répertoire conseillé (annulable)
-    if (CC.RepPresets && !CC.store.get('cc.preset.auto', false)) {
-      CC.store.set('cc.preset.auto', true);
-      for (const pre of CC.RepPresets) {
+    // (un drapeau par répertoire : un nouveau répertoire conseillé s'ajoute aussi chez ceux qui avaient déjà le premier)
+    for (const pre of CC.RepPresets || []) {
+      const flag = 'cc.preset.auto.' + pre.id;
+      const done = CC.store.get(flag, false) || (pre.id === 'black-e5-d5' && CC.store.get('cc.preset.auto', false));
+      if (done) continue;
+      CC.store.set(flag, true);
+      {
         if (R.size(pre.color) > 0) continue;
         const snap = R.snapshot(pre.color);
         if (R.addPreset(pre).added) {
           RP.undo = { color: pre.color, snap };
-          RP.presetNote = pre;
+          RP.presetNote = (RP.presetNote || []).concat(pre);
         }
       }
     }
@@ -1077,13 +1081,15 @@
     });
   };
   UI.show = function () {
-    if (RP.presetNote) {
-      const pre = RP.presetNote;
+    if (RP.presetNote && RP.presetNote.length) {
+      const list = RP.presetNote;
       RP.presetNote = null;
-      RP.color = pre.color;
+      const last = list[list.length - 1];
+      RP.color = last.color;
       RP.path = [];
       RP.tab = 'build';
-      setTimeout(() => app.toast(`J’ai ajouté le répertoire conseillé « ${CC.esc(pre.name)} ». <button class="linkbtn" data-undo>Annuler</button>`), 300);
+      const names = list.map((p) => '« ' + CC.esc(p.name) + ' »').join(' et ');
+      setTimeout(() => app.toast(`J’ai ajouté ${list.length > 1 ? 'les répertoires conseillés' : 'le répertoire conseillé'} ${names}. <button class="linkbtn" data-undo>Annuler</button>`), 300);
     }
     renderTabs();
   };
