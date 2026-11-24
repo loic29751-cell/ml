@@ -538,6 +538,7 @@
           'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d6 Nxf7 Qe7 Nxh8',
           'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Na5 Bb5+ c6 dxc6 bxc6 Be2 h6 Nf3 e4 Ne5 Bd6 d4',
           'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 Qe7 Bxf7+ Kd8 Bb3',
+          'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 Bc5 Bxf7+ Ke7 Bb3 Nd4 Nc3',
         ],
       },
       {
@@ -597,6 +598,7 @@
         lines: [
           'e4 e5 Nf3 Nf6 Bc4 Nc6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Ke1 Qh4+ Ke2 Qf2+ Kd3 Nc5+ Kc3 Qd4#',
           'e4 e5 Nf3 Nf6 Bc4 Nc6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Kf1 Qh4 Nxh8 Qf2#',
+          'e4 e5 Nf3 Nf6 Bc4 Nc6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Ke3 Qh4 g3 Nxg3 hxg3 Qd4+ Kf3 d5',
           'e4 e5 Nf3 Nf6 Bc4 Nc6 Ng5 Bc5 Bxf7+ Ke7 Bb3 Nd4',
           'e4 e5 Nf3 Nf6 Bc4 Nc6 d3 Bc5 O-O d6',
         ],
