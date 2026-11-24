@@ -536,7 +536,8 @@
           'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 Nxf7 Kxf7 Qf3+ Kg8 Bxd5+ Qxd5 Qxd5+ Be6 Qxe6#',
           'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 Nxf7 Kxf7 Qf3+ Ke6 Nc3',
           'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d6 Nxf7 Qe7 Nxh8',
-          'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Na5 Bb5+ c6 dxc6 bxc6 Be2',
+          'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Na5 Bb5+ c6 dxc6 bxc6 Be2 h6 Nf3 e4 Ne5 Bd6 d4',
+          'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 Qe7 Bxf7+ Kd8 Bb3',
         ],
       },
       {
