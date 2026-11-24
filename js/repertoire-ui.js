@@ -401,7 +401,7 @@
         '<details class="og tsec"' + (inside ? ' open' : '') + '><summary><span class="og-name">Contre ' + plyLabel(ply) + ' ' + CC.sanHTML(nd.san) +
         (ans ? ' <span class="tsec-ans">→ ' + plyLabel(ply + 1) + ' ' + CC.sanHTML(ans.san) + '</span>' : '') +
         (op ? ' <span class="tsec-op">' + CC.esc(op.name.split(':').pop().trim()) + '</span>' : '') +
-        '</span><span class="og-n">' + nMine + ' coup' + (nMine > 1 ? 's' : '') + '</span></summary><div class="tsec-body">' +
+        '</span><span class="og-n">' + nMine + ' coup' + (nMine > 1 ? 's' : '') + '</span><button class="og-play" data-drill-ti="' + (RP.tpaths.push(p.concat(nd.uci)) - 1) + '" title="Réviser cette ligne">▶</button></summary><div class="tsec-body">' +
         (nd.kids === null ? '<div class="tv tv-stem">' + tmove(nd, p, true) + '<span class="tv-trans">→ transposition</span></div>' : secHTML([nd], p, true, level + 1)) +
         '</div></details>';
     }
@@ -430,16 +430,16 @@
     }
     return Array.from(groups.values()).sort((a, b) => b.lines.length - a.lines.length);
   }
+  /** Une ligne en texte (toucher la ligne lance sa révision) */
   function lineHTML(path) {
     const ch = new Chess();
     let html = '';
-    path.forEach((u, k) => {
+    path.forEach((u) => {
       const fb = ch.fen();
       const mv = ch.move(A.uciMove(u));
       if (!mv) return;
       if (mv.color === 'w') html += '<span class="tv-n">' + CC.moveLabel(fb, 'w') + '</span>';
-      const i = RP.tpaths.push(path.slice(0, k + 1)) - 1;
-      html += '<button class="tv-m' + (mv.color === RP.color ? ' mine' : '') + '" data-ti="' + i + '">' + CC.sanHTML(mv.san) + '</button>';
+      html += '<span class="tv-s' + (mv.color === RP.color ? ' mine' : '') + '">' + CC.sanHTML(mv.san) + '</span>';
     });
     return html;
   }
@@ -497,17 +497,20 @@
       html += '<h4 class="tree-h">' + (RP.path.length ? 'La suite dans ton répertoire' : 'Tout ton répertoire') + '</h4>';
       html += tree || '<p class="muted small">Rien d’enregistré après cette position.</p>';
       html += '<h4 class="tree-h">Tes ouvertures (' + groups.length + ')</h4><div class="og-list">';
-      for (const g of groups) {
+      RP.groups = groups;
+      RP.tlines = [];
+      groups.forEach((g, gi) => {
         const open = RP.path.length && g.lines.some((l) => l.length >= RP.path.length && samePath(l.slice(0, RP.path.length), RP.path));
-        html += '<details class="og"' + (open ? ' open' : '') + '><summary><span class="og-name">' + CC.esc(g.name) + '</span><span class="og-n">' + g.lines.length + ' ligne' + (g.lines.length > 1 ? 's' : '') + '</span></summary><div class="og-lines">' +
-          g.lines.map((l) => '<div class="og-line">' + lineHTML(l) + '</div>').join('') + '</div></details>';
-      }
+        html += '<details class="og og-g"' + (open ? ' open' : '') + '><summary data-drill-group="' + gi + '" title="Réviser ' + CC.esc(g.name) + '"><span class="og-name">' + CC.esc(g.name) + '</span><span class="og-n">' + g.lines.length + ' ligne' + (g.lines.length > 1 ? 's' : '') + '</span><span class="og-play">▶ Réviser</span><span class="og-chev" data-og-toggle title="Voir les coups">▾</span></summary><div class="og-lines">' +
+          g.lines.map((l) => '<div class="og-line" data-drill-line="' + (RP.tlines.push({ path: l, name: g.name }) - 1) + '" title="Réviser cette ligne"><span class="ol-play">▶</span>' + lineHTML(l) + '</div>').join('') + '</div></details>';
+      });
       html += '</div>';
     }
     const todo = q.due.length + fresh;
     setBody(
       html,
-      (size ? '<button class="btn btn-sm btn-primary" data-start-review>Réviser' + (todo ? ' (' + todo + ')' : '') + '</button>' : '') +
+      (size && RP.path.length ? '<button class="btn btn-sm btn-primary" data-drill-here>▶ Réviser cette ligne</button>' : '') +
+        (size ? '<button class="btn btn-sm' + (RP.path.length ? '' : ' btn-primary') + '" data-start-review>' + (RP.path.length ? 'Tout réviser' : 'Réviser') + (todo ? ' (' + todo + ')' : '') + '</button>' : '') +
         '<button class="btn btn-sm" data-edit>✏️ Modifier ici</button>' +
         (presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Répertoires conseillés</button>' : '') +
         (RP.undo && RP.undo.color === color ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : '')
@@ -775,7 +778,7 @@
         '<div class="rp-btns">' +
         (st.missing && !full ? '<button class="btn btn-sm' + (pre.variant ? '' : ' btn-primary') + '" data-preset-add="' + pre.id + '">Ajouter</button>' : '') +
         (st.diff ? '<button class="btn btn-sm' + (pre.variant ? ' btn-primary' : '') + '" data-preset-replace="' + pre.id + '">Remplacer mes coups</button>' : '') +
-        '<button class="btn btn-sm" data-preset-view="' + pre.id + '">Voir</button></div></div>';
+        '<button class="btn btn-sm" data-preset-drill="' + pre.id + '">▶ Réviser ces lignes</button></div></div>';
     }
     setBody(html, '');
     mood('thinking', 'bob');
@@ -857,6 +860,79 @@
     renderTabs();
   }
 
+  /* ---------- Révision d'une ligne précise (comme « Practice » dans Chessbook) ---------- */
+  /** Cartes le long de lignes (chemins uci depuis le départ) : à chaque coup du joueur, le coup attendu est celui de la ligne.
+   *  Si ce coup est aussi celui du répertoire, la réponse compte pour la répétition espacée. */
+  function lineCards(paths) {
+    const color = RP.color;
+    const srs = R.data().srs;
+    const seen = new Set();
+    const cards = [];
+    for (const path of paths) {
+      const ch = new Chess();
+      const sans = [];
+      for (let k = 0; k < path.length; k++) {
+        const fen = ch.fen();
+        const mv = ch.move(A.uciMove(path[k]));
+        if (!mv) break;
+        if (mv.color === color) {
+          const key = R.fenKey(fen);
+          const uci = uciOf(mv);
+          const e = R.get(color, fen);
+          const ck = e && e.uci === uci ? R.cardKey(color, key, uci) : null;
+          if (!seen.has(key + '|' + uci)) {
+            seen.add(key + '|' + uci);
+            cards.push({ fen, key, path: path.slice(0, k), sans: sans.slice(), move: { uci, san: mv.san }, ck, srs: ck ? srs[ck] || null : null });
+          }
+        }
+        sans.push(mv.san);
+      }
+    }
+    return cards;
+  }
+  /** Toutes les lignes du répertoire qui passent par ce chemin, du départ jusqu'au bout de chaque ligne */
+  function branchPaths(path) {
+    const out = [];
+    const rec = (nodes, p) => {
+      for (const n of nodes) {
+        const p2 = p.concat(n.uci);
+        if (!n.kids || !n.kids.length) out.push(p2);
+        else rec(n.kids, p2);
+      }
+    };
+    const nodes = subtree(RP.color, fenOf(path), 80, new Set(), { n: 3000 }) || [];
+    if (nodes.length) rec(nodes, path.slice());
+    else out.push(path.slice());
+    return out;
+  }
+  function lineTitle(path) {
+    const sans = sansOf(path);
+    const op = A.identifyOpening(sans.map((m) => m.san)).opening;
+    if (op) return op.name;
+    return sans.slice(-4).map((m) => (m.color === 'w' ? m.label + ' ' : '') + m.san).join(' ') || 'Ligne';
+  }
+  const sanPath = (line) => {
+    const ch = new Chess();
+    const p = [];
+    for (const sn of line.split(' ')) {
+      const mv = ch.move(sn);
+      if (!mv) break;
+      p.push(uciOf(mv));
+    }
+    return p;
+  };
+  function startLineReview(paths, title) {
+    const cards = lineCards(paths);
+    if (!cards.length) {
+      app.toast('Aucun coup à toi dans cette ligne.');
+      return;
+    }
+    RP.drill = { cards: cards.slice(0, 60), i: 0, ok: 0, ko: 0, state: 'ask', title, src: { paths, title } };
+    RP.lastDrillSrc = RP.drill.src;
+    RP.tab = 'review';
+    renderTabs();
+  }
+
   function showCard() {
     const d = RP.drill;
     const c = d.cards[d.i];
@@ -891,7 +967,7 @@
     const line = c.sans.length ? sansOf(c.path).map((m, k) => (m.color === 'w' || k === 0 ? `<span class="rl-num">${CC.esc(m.label)}</span>` : '') + CC.sanHTML(m.san)).join(' ') : 'Position de départ';
     const op = A.identifyOpening(c.sans).opening;
     setBody(
-      `<div class="drill-prog"><span>Coup ${d.i + 1} / ${d.cards.length}</span><span class="muted">${d.ok} ✓ · ${d.ko} ✗</span></div>
+      `<div class="drill-prog"><span>${d.title ? `<b>${CC.esc(d.title)}</b> · ` : ''}Coup ${d.i + 1} / ${d.cards.length}</span><span class="muted">${d.ok} ✓ · ${d.ko} ✗</span></div>
       <div class="progress"><div class="progress-fill" style="width:${(d.i / d.cards.length) * 100}%"></div></div>
       <div class="bubble drill-bubble">${extra || `<b>À toi !</b> Quel est ton coup avec les ${side(RP.color)} ?`}
         <div class="drill-line">${line}</div>${op ? `<div class="muted small">${CC.esc(op.name)}</div>` : ''}</div>
@@ -913,7 +989,7 @@
     if (uciOf(mv) === c.move.uci) {
       const first = d.state === 'ask';
       if (first) {
-        R.grade(c.ck, true);
+        if (c.ck) R.grade(c.ck, true);
         d.ok++;
       }
       d.state = 'done';
@@ -925,10 +1001,10 @@
         if (RP.drill !== d || d.cards[d.i] !== c || d.pause) return;
         d.i++;
         showCard();
-      }, 1600);
+      }, 1200);
     } else {
       if (d.state === 'ask') {
-        R.grade(c.ck, false);
+        if (c.ck) R.grade(c.ck, false);
         d.ko++;
       }
       d.state = 'fix';
@@ -949,7 +1025,7 @@
     const d = RP.drill;
     const c = d.cards[d.i];
     if (d.state === 'ask') {
-      R.grade(c.ck, false);
+      if (c.ck) R.grade(c.ck, false);
       d.ko++;
     }
     d.state = 'fix';
@@ -965,7 +1041,9 @@
     setBody(
       `<div class="rep-big"><div class="rep-big-n">${d.ok}/${d.cards.length}</div><div>coups retrouvés du premier coup</div><div class="muted small">${next ? `Prochaine révision ${next}.` : ''}</div></div>
       <p class="rep-help">${d.ko ? 'Les coups oubliés reviendront dans 10 minutes, puis demain.' : 'Sans faute ! Ton répertoire est bien en place.'}</p>`,
-      '<button class="btn btn-primary" data-start-review>Encore une série</button><button class="btn" data-tab-go="tree">Retour au répertoire</button>'
+      d.src
+        ? '<button class="btn btn-primary" data-drill-again>Recommencer cette ligne</button><button class="btn" data-tab-go="tree">Retour au répertoire</button>'
+        : '<button class="btn btn-primary" data-start-review>Encore une série</button><button class="btn" data-tab-go="tree">Retour au répertoire</button>'
     );
   }
 
@@ -1386,6 +1464,38 @@
         const fen = curFen();
         const mv = new Chess(fen).move(A.uciMove(pickB.dataset.pick));
         if (mv) pick(fen, uciOf(mv), mv.san, R.get(RP.color, fen));
+        return;
+      }
+      const dg = t.closest('summary[data-drill-group]');
+      if (dg) {
+        if (t.closest('[data-og-toggle]')) return; // la flèche ouvre ou ferme la liste des coups
+        e.preventDefault();
+        const g = (RP.groups || [])[+dg.dataset.drillGroup];
+        if (g) startLineReview(g.lines, g.name);
+        return;
+      }
+      const dl = t.closest('[data-drill-line]');
+      if (dl) {
+        const l = (RP.tlines || [])[+dl.dataset.drillLine];
+        if (l) startLineReview([l.path], l.name);
+        return;
+      }
+      const db = t.closest('[data-drill-ti]');
+      if (db) {
+        e.preventDefault();
+        const p = RP.tpaths[+db.dataset.drillTi];
+        if (p) startLineReview(branchPaths(p), lineTitle(p));
+        return;
+      }
+      if (t.closest('[data-drill-here]')) return startLineReview(branchPaths(RP.path), lineTitle(RP.path));
+      if (t.closest('[data-drill-again]') && RP.lastDrillSrc) return startLineReview(RP.lastDrillSrc.paths, RP.lastDrillSrc.title);
+      const pd = t.closest('[data-preset-drill]');
+      if (pd) {
+        const pre = (CC.RepPresets || []).find((x) => x.id === pd.dataset.presetDrill);
+        if (pre) {
+          RP.presets = false;
+          startLineReview(pre.lines.map(sanPath), pre.name);
+        }
         return;
       }
       const tm = t.closest('[data-ti]');

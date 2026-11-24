@@ -864,6 +864,21 @@ select { background: var(--bg-deep); border: 1px solid var(--line); border-radiu
 .tsec-op { color: var(--text-3); font-weight: 700; font-size: 12px; margin-left: 6px; }
 .tv-stem { margin-bottom: 2px; }
 
+/* Révision d'une ligne en un toucher */
+.og-g summary::before { content: none; }
+.og-g summary { gap: 8px; }
+.og-play { border: 0; cursor: pointer; white-space: nowrap; font: 900 12px var(--font); color: #fff; background: var(--accent); border-radius: 999px; padding: 4px 10px; box-shadow: 0 2px 0 var(--accent-lo); }
+.og-play:hover { background: var(--accent-hi); }
+.tsec summary .og-play { padding: 3px 9px; }
+.og-chev { color: var(--text-3); font-size: 13px; padding: 4px 6px; border-radius: 6px; }
+.og-chev:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+.og-g[open] .og-chev { transform: rotate(180deg); }
+.og-line[data-drill-line] { cursor: pointer; border-radius: 6px; padding: 4px 6px; }
+.og-line[data-drill-line]:hover { background: rgba(217, 119, 87, 0.12); }
+.ol-play { color: var(--accent); font-size: 11px; margin-right: 6px; }
+.tv-s { color: var(--text-3); font-weight: 700; padding: 0 3px; }
+.tv-s.mine { color: var(--text); font-weight: 900; }
+
 /* « Pourquoi ce coup ? » */
 .why-box { font-size: 14px; line-height: 1.5; }
 .why-facts { font-size: 12.5px; color: #5c5850; border-bottom: 1px solid rgba(0, 0, 0, 0.08); padding-bottom: 6px; margin-bottom: 6px; }
