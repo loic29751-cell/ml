@@ -198,7 +198,7 @@
     html += `<div class="rep-pos"><div class="rep-op">${op ? CC.esc(op.name) : RP.path.length ? 'Hors des ouvertures répertoriées' : 'Position de départ'}</div><div class="rep-turn${mine ? ' me' : ''}">${mine ? 'À toi de jouer' : 'Coup de l’adversaire'}</div></div>`;
     if (mine) {
       html += rep
-        ? `<div class="rep-mine ok"><span>Ton coup ici :</span> ${san(rep.san)} <span class="rep-src">${CC.esc(rep.src || '')}</span><button class="linkbtn" data-rm>Retirer</button></div>`
+        ? `<div class="rep-mine ok"><span>Ton coup ici :</span> ${san(rep.san)} <span class="rep-src">${CC.esc(rep.src || '')}</span><button class="linkbtn" data-why-here>Pourquoi ?</button><button class="linkbtn" data-rm>Retirer</button></div><div class="bubble why-box" id="why-box" hidden></div>`
         : '<div class="rep-mine">Pas encore de coup ici : joue-le sur l’échiquier ou choisis-en un ci-dessous.</div>';
     } else {
       html += '<div class="rep-mine muted">Choisis la réponse adverse à préparer (ou joue-la sur l’échiquier).</div>';
@@ -213,6 +213,91 @@
     );
     mood(mine && !rep ? 'thinking' : 'idle', 'bob');
     loadPositionData(fen, mine);
+  }
+
+  /* =================== POURQUOI CE COUP ? =================== */
+  let whyToken = 0;
+  /** Explique un coup du répertoire : Stockfish (éval, autres coups, menace adverse si on passait) puis le coach IA */
+  async function explainMove(path, uci) {
+    const box = $('#why-box');
+    if (!box) return;
+    const token = ++whyToken;
+    box.hidden = false;
+    box.innerHTML = '<span class="cc-spin">✻</span> Stockfish regarde la position…';
+    const fen = fenOf(path);
+    const mover = turnOf(fen);
+    const ch = new Chess(fen);
+    const mv = ch.move(A.uciMove(uci));
+    if (!mv) return;
+    const sans = sansOf(path);
+    const lineTxt = sans.map((m, k) => (m.color === 'w' || k === 0 ? m.label + ' ' : '') + m.san).join(' ') || 'position de départ';
+    const op = A.identifyOpening(sans.map((m) => m.san).concat(mv.san)).opening;
+    let alts = '';
+    let evalTxt = '';
+    let threat = '';
+    try {
+      const res = await app.engine.analyze(fen, { depth: 14, movetime: 1500, multipv: 3 });
+      if (token !== whyToken) return;
+      alts = res.lines.map((l) => (A.sanOf(fen, l.pv[0]) || '?') + ' (' + CC.fmtEval(l.score) + ')').join(', ');
+      const own = res.lines.find((l) => l.pv[0] === uci);
+      let sc = own ? own.score : null;
+      if (!sc) {
+        const r2 = await app.engine.analyze(ch.fen(), { depth: 14, movetime: 1500, multipv: 1 });
+        sc = r2.lines[0] && r2.lines[0].score;
+      }
+      evalTxt = sc ? CC.fmtEval(sc) : '';
+      // Et si on passait son tour ? Le meilleur coup adverse montre ce que notre coup empêche
+      if (!new Chess(fen).in_check()) {
+        const p = fen.split(' ');
+        p[1] = mover === 'w' ? 'b' : 'w';
+        p[3] = '-';
+        const nf = p.join(' ');
+        if (new Chess(nf).moves().length) {
+          const r3 = await app.engine.analyze(nf, { depth: 12, movetime: 1000, multipv: 1 });
+          if (r3.lines[0]) threat = A.pvToSan(nf, r3.lines[0].pv, 3).join(' ');
+        }
+      }
+    } catch (e) {
+      /* Stockfish indisponible : on explique quand même */
+    }
+    if (token !== whyToken) return;
+    const facts =
+      '<div class="why-facts">Stockfish : ' + san(mv.san) + (evalTxt ? ' → ' + CC.esc(evalTxt) : '') + (alts ? '<br>Meilleurs coups ici : ' + CC.esc(alts) : '') +
+      (threat ? '<br>Si tu passais ton tour, l’adversaire jouerait : <b>' + CC.esc(threat) + '</b>' : '') + '</div>';
+    if (!CC.AI.hasKey(app.S.settings)) {
+      box.innerHTML = facts + '<div class="muted small">Ajoute une clé Claude ou Gemini dans les Réglages pour que Clawd t’explique l’idée en français.</div>';
+      return;
+    }
+    box.innerHTML = facts + '<div class="why-text"><span class="cc-spin">✻</span> Clawd réfléchit…</div>';
+    const prompt = [
+      'Ouverture : ' + (op ? op.name : 'inconnue') + '.',
+      'Coups joués : ' + lineTxt + '.',
+      'Le joueur a les ' + side(RP.color) + ' ; dans son répertoire, il joue ici ' + mv.san + ' (coup des ' + side(mover) + ').',
+      'Position avant le coup (FEN) : ' + fen,
+      evalTxt ? 'Stockfish : après ' + mv.san + ', évaluation ' + evalTxt + ' (en pions, point de vue des Blancs).' : '',
+      alts ? 'Meilleurs coups selon Stockfish dans cette position : ' + alts + '.' : '',
+      threat ? 'Si ce camp passait son tour, le meilleur coup adverse serait : ' + threat + '.' : '',
+      '',
+      'Explique simplement, en 3 phrases maximum (60 mots), l’idée de ' + mv.san + ' : ce qu’il empêche ou ce qu’il prépare. Appuie-toi sur la menace adverse indiquée. Si un autre coup est nettement meilleur selon Stockfish, dis-le en une phrase.',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    let acc = '';
+    try {
+      await CC.AI.ask(app.S.settings, {
+        prompt,
+        maxTokens: 2000,
+        onText: (d) => {
+          if (token !== whyToken) return;
+          acc += d;
+          const t = box.querySelector('.why-text');
+          if (t) t.innerHTML = CC.esc(acc);
+        },
+      });
+    } catch (e) {
+      const t = box.querySelector('.why-text');
+      if (t && token === whyToken) t.innerHTML = '<span class="ko-txt">' + CC.esc(CC.AI.errorText(e)) + '</span>';
+    }
   }
 
   /* =================== MON RÉPERTOIRE (vue façon Chessbook) =================== */
@@ -401,7 +486,7 @@
       html += '<div class="rep-pos"><div class="rep-op">' + (op ? CC.esc(op.name) : RP.path.length ? 'Hors des ouvertures répertoriées' : 'Position de départ') + '</div><div class="rep-turn' + (mine ? ' me' : '') + '">' + (mine ? 'À toi de jouer' : 'Coup de l’adversaire') + '</div></div>';
       if (mine) {
         html += rep
-          ? '<div class="rep-mine ok"><span>Ton coup ici :</span> ' + san(rep.san) + '</div>'
+          ? '<div class="rep-mine ok"><span>Ton coup ici :</span> ' + san(rep.san) + '<button class="linkbtn" data-why-here>Pourquoi ?</button></div><div class="bubble why-box" id="why-box" hidden></div>'
           : '<div class="rep-mine">Aucun coup prévu ici. <button class="linkbtn" data-edit>Ajoute-le dans « Construire »</button></div>';
       } else {
         html += replies.length
@@ -777,6 +862,8 @@
     const c = d.cards[d.i];
     if (!c) return finishReview();
     d.state = 'ask';
+    d.pause = false;
+    whyToken++;
     board.setOrientation(RP.color);
     board.setArrows([]);
     board.setBadge(null);
@@ -807,8 +894,9 @@
       `<div class="drill-prog"><span>Coup ${d.i + 1} / ${d.cards.length}</span><span class="muted">${d.ok} ✓ · ${d.ko} ✗</span></div>
       <div class="progress"><div class="progress-fill" style="width:${(d.i / d.cards.length) * 100}%"></div></div>
       <div class="bubble drill-bubble">${extra || `<b>À toi !</b> Quel est ton coup avec les ${side(RP.color)} ?`}
-        <div class="drill-line">${line}</div>${op ? `<div class="muted small">${CC.esc(op.name)}</div>` : ''}</div>`,
-      `${d.state === 'ask' ? '<button class="btn btn-sm" data-reveal>Je ne sais plus</button>' : ''}<button class="btn btn-sm btn-ghost" data-stop-review>Arrêter</button>`
+        <div class="drill-line">${line}</div>${op ? `<div class="muted small">${CC.esc(op.name)}</div>` : ''}</div>
+      <div class="bubble why-box" id="why-box" hidden></div>`,
+      `${d.state === 'ask' ? '<button class="btn btn-sm" data-reveal>Je ne sais plus</button>' : '<button class="btn btn-sm" data-why>Pourquoi ce coup ?</button>'}${d.state === 'done' ? '<button class="btn btn-sm btn-primary" data-next-card>Continuer</button>' : ''}<button class="btn btn-sm btn-ghost" data-stop-review>Arrêter</button>`
     );
     if (!extra) mood('thinking', 'bob');
   }
@@ -823,18 +911,21 @@
     board.setMovable(null);
     app.sound(mv);
     if (uciOf(mv) === c.move.uci) {
-      if (d.state === 'ask') {
+      const first = d.state === 'ask';
+      if (first) {
         R.grade(c.ck, true);
         d.ok++;
       }
+      d.state = 'done';
       board.setBadge({ sq: mv.to, cls: 'best' });
       mood('happy', 'jump');
-      renderCardPanel(d.state === 'ask' ? '<b class="ok-txt">✓ Exact !</b>' : '<b>C’est ça, retenu pour la prochaine fois.</b>');
+      renderCardPanel(first ? '<b class="ok-txt">✓ Exact !</b>' : '<b>C’est ça, retenu pour la prochaine fois.</b>');
+      // passage automatique au coup suivant, sauf si on a demandé « Pourquoi ? »
       setTimeout(() => {
-        if (RP.drill !== d) return;
+        if (RP.drill !== d || d.cards[d.i] !== c || d.pause) return;
         d.i++;
         showCard();
-      }, 800);
+      }, 1600);
     } else {
       if (d.state === 'ask') {
         R.grade(c.ck, false);
@@ -874,7 +965,7 @@
     setBody(
       `<div class="rep-big"><div class="rep-big-n">${d.ok}/${d.cards.length}</div><div>coups retrouvés du premier coup</div><div class="muted small">${next ? `Prochaine révision ${next}.` : ''}</div></div>
       <p class="rep-help">${d.ko ? 'Les coups oubliés reviendront dans 10 minutes, puis demain.' : 'Sans faute ! Ton répertoire est bien en place.'}</p>`,
-      '<button class="btn btn-primary" data-start-review>Encore une série</button><button class="btn" data-tab-go="build">Retour au répertoire</button>'
+      '<button class="btn btn-primary" data-start-review>Encore une série</button><button class="btn" data-tab-go="tree">Retour au répertoire</button>'
     );
   }
 
@@ -1381,6 +1472,21 @@
       }
       if (t.closest('[data-start-review]')) return startReview();
       if (t.closest('[data-reveal]')) return reveal();
+      if (t.closest('[data-why]') && RP.drill) {
+        const c = RP.drill.cards[RP.drill.i];
+        RP.drill.pause = true;
+        if (c) explainMove(c.path, c.move.uci);
+        return;
+      }
+      if (t.closest('[data-next-card]') && RP.drill) {
+        RP.drill.i++;
+        return showCard();
+      }
+      if (t.closest('[data-why-here]')) {
+        const e2 = R.get(RP.color, curFen());
+        if (e2) explainMove(RP.path, e2.uci);
+        return;
+      }
       if (t.closest('[data-stop-review]')) {
         RP.drill = null;
         return renderTab();
