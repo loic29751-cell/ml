@@ -227,6 +227,21 @@
       ],
     },
     {
+      // Variante gardée de côté (pas installée) : si tu prends en f7 avec le cavalier contre le Traxler
+      id: 'w-traxler-nxf7',
+      color: 'w',
+      variant: true,
+      name: 'Blancs : contre le Traxler avec 5.Nxf7 (le roi en g1)',
+      desc: 'Ton répertoire joue 5.Bxf7+ (simple). Si tu prends avec le cavalier (5.Nxf7), il sacrifie 5…Bxf2+ : prends, et après 6…Nxe4+ ton roi recule en g1, jamais en f3 ni e2 (mat !). Ensuite tu prends la tour h8 et tu es nettement mieux (+3, vérifié par Stockfish).',
+      lines: [
+        'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Kg1 Qh4 g3 Nxg3 Nxh8 Nxh1 Bf7+ Ke7 Kxh1',
+        'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Kg1 Qh4 g3 Qe7 Qe2',
+        'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Kg1 Qe7 Nxh8',
+        'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 Bc5 Nxf7 Bxf2+ Kxf2 Nxe4+ Kg1 d5 Nxd8',
+        'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 Bc5 Nxf7 Qe7 Nxh8',
+      ],
+    },
+    {
       id: 'b-mine',
       color: 'b',
       name: 'Noirs : mes ouvertures + pièges de mat',
