@@ -37,9 +37,14 @@
     }
     return data;
   };
-  R.save = () => CC.store.set(KEY, R.data());
+  let dataVer = 0; // change à chaque modification : invalide le cache du parcours
+  R.save = () => {
+    dataVer++;
+    CC.store.set(KEY, R.data());
+  };
   R.snapshot = (color) => JSON.stringify(R.data()[color]);
   R.restore = (color, snap) => {
+    dataVer++;
     R.data()[color] = JSON.parse(snap);
     R.save();
   };
@@ -52,51 +57,113 @@
   };
   R.remove = (color, fen) => {
     delete R.data()[color][R.fenKey(fen)];
+    dataVer++;
     R.prune(color);
     R.save();
   };
   R.size = (color) => Object.keys(R.data()[color]).length;
 
+  /** Un coup (SAN ou uci) depuis une position FEN, mis en cache : { uci, san, color, piece, fen (après) } ou null.
+   *  Les lignes des répertoires partagent leurs débuts : le cache évite de recalculer la notation des milliers de fois. */
+  const stepMemo = new Map();
+  const stepBoard = new Chess();
+  R.step = function (fen, mv) {
+    const k = fen + '|' + mv;
+    let r = stepMemo.get(k);
+    if (r !== undefined) return r;
+    stepBoard.load(fen);
+    const m = /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(mv) ? stepBoard.move(A.uciMove(mv)) : stepBoard.move(mv);
+    r = m ? { uci: m.from + m.to + (m.promotion || ''), san: m.san, color: m.color, piece: m.piece, from: m.from, to: m.to, fen: stepBoard.fen() } : null;
+    if (stepMemo.size > 60000) stepMemo.clear();
+    stepMemo.set(k, r);
+    return r;
+  };
+  /** Une ligne (SAN séparés par des espaces, ou tableau de coups uci) jouée depuis le départ :
+   *  [{ fenBefore, uci, san, color, fen }] ; s'arrête au premier coup illégal */
+  R.line = function (moves) {
+    const list = typeof moves === 'string' ? moves.split(' ').filter(Boolean) : moves;
+    const out = [];
+    let fen = CC.START_FEN;
+    for (const mv of list) {
+      const r = R.step(fen, mv);
+      if (!r) break;
+      out.push({ fenBefore: fen, uci: r.uci, san: r.san, color: r.color, piece: r.piece, from: r.from, to: r.to, fen: r.fen });
+      fen = r.fen;
+    }
+    return out;
+  };
+
+  R.pawnFirst = (a, b) => (a.piece === 'p' ? 0 : 1) - (b.piece === 'p' ? 0 : 1);
+  /** Coups légaux d'une position (FEN), en cache par position */
+  const kidsMemo = new Map();
+  R.childrenOf = function (fen) {
+    const k = R.fenKey(fen);
+    let r = kidsMemo.get(k);
+    if (!r) {
+      stepBoard.load(fen);
+      r = R.children(stepBoard);
+      if (kidsMemo.size > 20000) kidsMemo.clear();
+      kidsMemo.set(k, r);
+    }
+    return r;
+  };
+  /** Coups légaux de la position de `ch` avec la clé de la position obtenue, sans notation SAN (rapide) :
+   *  [{ from, to, promotion, piece, uci, key }] */
+  R.children = function (ch) {
+    if (ch.child_fens) {
+      return ch.child_fens().map((m) => ({ from: m.from, to: m.to, promotion: m.promotion, piece: m.piece, uci: m.from + m.to + (m.promotion || ''), key: R.fenKey(m.fen) }));
+    }
+    return ch.moves({ verbose: true }).map((m) => {
+      ch.move(m);
+      const key = R.fenKey(ch.fen());
+      ch.undo();
+      return { from: m.from, to: m.to, promotion: m.promotion, piece: m.piece, uci: m.from + m.to + (m.promotion || ''), key };
+    });
+  };
+
   /**
    * Positions où c'est à moi de jouer, atteignables depuis le départ en suivant mes coups
    * et les réponses adverses préparées : [{ fen, key, path:[uci], sans:[san], move }]
    */
-  R.walk = function (color, maxPly) {
+  const walkCache = new Map();
+  R.walk = function (color, maxPly, fresh) {
+    const ck = color + '|' + (maxPly || 40);
+    const hit = walkCache.get(ck);
+    if (!fresh && hit && hit.ver === dataVer) return hit.out;
     const d = R.data()[color];
     const out = [];
     const seen = new Set();
-    const ch = new Chess();
+    // coups et positions filles en cache (R.step, R.childrenOf) : le parcours suivant est quasi instantané
     const rec = (fen, path, sans) => {
       if (path.length > (maxPly || 40)) return;
-      ch.load(fen);
-      if (ch.turn() === color) {
+      if (fen.split(' ')[1] === color) {
         const key = R.fenKey(fen);
         if (seen.has(key)) return;
         seen.add(key);
         const e = d[key];
         if (!e) return;
         out.push({ fen, key, path, sans, move: e });
-        const mv = ch.move(A.uciMove(e.uci));
-        if (mv) rec(ch.fen(), path.concat(e.uci), sans.concat(mv.san));
+        const r = R.step(fen, e.uci);
+        if (r) rec(r.fen, path.concat(e.uci), sans.concat(r.san));
       } else {
         // coups de pion d'abord : les transpositions sont rangées dans l'ordre habituel (1.e4 e5 2.Nf3 Nc6 plutôt que 1.e4 Nc6 2.Nf3 e5)
-        const replies = ch.moves({ verbose: true }).sort((a, b) => (a.piece === 'p' ? 0 : 1) - (b.piece === 'p' ? 0 : 1));
+        const replies = R.childrenOf(fen).filter((m) => d[m.key]).sort(R.pawnFirst);
         for (const m of replies) {
-          ch.load(fen);
-          ch.move(m);
-          const f2 = ch.fen();
-          if (d[R.fenKey(f2)]) rec(f2, path.concat(m.from + m.to + (m.promotion || '')), sans.concat(m.san));
+          const r = R.step(fen, m.uci);
+          if (r) rec(r.fen, path.concat(m.uci), sans.concat(r.san));
         }
       }
     };
     rec(CC.START_FEN, [], []);
+    walkCache.set(ck, { ver: dataVer, out });
     return out;
   };
 
   /** Retire les positions devenues inaccessibles (et leurs fiches de révision) */
   R.prune = function (color) {
     const d = R.data();
-    const keep = new Set(R.walk(color).map((n) => n.key));
+    dataVer++;
+    const keep = new Set(R.walk(color, 0, true).map((n) => n.key));
     for (const k of Object.keys(d[color])) if (!keep.has(k)) delete d[color][k];
     const alive = new Set(['w', 'b'].flatMap((c) => Object.keys(d[c]).map((k) => c + '|' + k + '|' + d[c][k].uci)));
     for (const ck of Object.keys(d.srs)) if (!alive.has(ck)) delete d.srs[ck];
@@ -214,19 +281,13 @@
     let skipped = 0;
     let replaced = 0;
     for (const line of pre.lines) {
-      const ch = new Chess();
       const todo = [];
-      let ok = true;
-      for (const san of line.split(' ')) {
-        const fb = ch.fen();
-        const mv = ch.move(san);
-        if (!mv) {
-          ok = false;
-          break;
-        }
+      const moves = R.line(line);
+      let ok = moves.length === line.split(' ').length;
+      for (const mv of ok ? moves : []) {
         if (mv.color !== pre.color) continue;
-        const k = R.fenKey(fb);
-        const uci = mv.from + mv.to + (mv.promotion || '');
+        const k = R.fenKey(mv.fenBefore);
+        const uci = mv.uci;
         if (d[k] && d[k].uci !== uci && !replace) {
           ok = false;
           break;

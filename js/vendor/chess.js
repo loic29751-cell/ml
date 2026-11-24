@@ -1236,6 +1236,25 @@ var Chess = function(fen) {
   }
 
   return {
+    /* Ajout Clawd Coach : positions filles sans calcul de la notation SAN (bien plus rapide pour parcourir
+     * un arbre d'ouvertures) : [{ from, to, promotion, fen }] pour chaque coup légal */
+    child_fens: function() {
+      var ugly = generate_moves({ legal: true })
+      var out = []
+      for (var i = 0, len = ugly.length; i < len; i++) {
+        make_move(ugly[i])
+        out.push({
+          from: algebraic(ugly[i].from),
+          to: algebraic(ugly[i].to),
+          promotion: ugly[i].promotion,
+          piece: ugly[i].piece,
+          fen: generate_fen()
+        })
+        undo_move()
+      }
+      return out
+    },
+
     /***************************************************************************
      * PUBLIC CONSTANTS (is there a better way to do this?)
      **************************************************************************/

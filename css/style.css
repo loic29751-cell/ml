@@ -998,3 +998,24 @@ select { background: var(--bg-deep); border: 1px solid var(--line); border-radiu
   .tab { font-size: 13px; padding: 7px 4px; line-height: 1.2; }
   .tabs { flex-wrap: nowrap; }
 }
+
+/* ================= Répertoire : pièges de mat ================= */
+.traps { box-shadow: inset 3px 0 0 var(--accent); margin-bottom: 4px; }
+.trap-list { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 6px; }
+.trap { cursor: pointer; border-radius: 8px; padding: 8px 10px; background: rgba(255, 255, 255, 0.03); }
+.trap:hover { background: rgba(217, 119, 87, 0.12); }
+.trap-h { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; font-size: 14px; }
+.trap-h .tag { margin-left: 6px; }
+.trap-d { font-size: 12.5px; color: var(--text-2); margin: 2px 0 4px; line-height: 1.4; }
+.trap-l { font-size: 12.5px; line-height: 1.7; }
+
+/* ================= Révision : flèches ◀ ▶ et ligne cliquable ================= */
+.rep-nav .rv-arrow { min-width: 52px; font-size: 16px; }
+.rv-where { flex: 1; min-width: 0; text-align: center; font-size: 12.5px; color: var(--text-3); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dl-m { border: 0; background: none; color: inherit; font: inherit; padding: 1px 3px; border-radius: 4px; cursor: pointer; }
+.dl-m.mine { color: #2b2a27; font-weight: 900; }
+.dl-m:hover { background: rgba(0, 0, 0, 0.08); }
+.dl-m.on { background: rgba(217, 119, 87, 0.35); color: #1f1e1b; }
+@media (max-width: 700px) {
+  .rep-nav .rv-arrow { min-width: 60px; padding: 6px 12px; font-size: 18px; }
+}

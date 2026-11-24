@@ -34,21 +34,13 @@
   };
 
   /* ---------------- Outils ---------------- */
+  // (R.line met les coups en cache : ces fonctions sont appelées des centaines de fois par écran)
   function fenOf(path) {
-    const ch = new Chess();
-    for (const u of path) if (!ch.move(A.uciMove(u))) break;
-    return ch.fen();
+    const l = R.line(path);
+    return l.length ? l[l.length - 1].fen : CC.START_FEN;
   }
   function sansOf(path) {
-    const ch = new Chess();
-    const out = [];
-    for (const u of path) {
-      const fb = ch.fen();
-      const mv = ch.move(A.uciMove(u));
-      if (!mv) break;
-      out.push({ san: mv.san, label: CC.moveLabel(fb, mv.color), color: mv.color });
-    }
-    return out;
+    return R.line(path).map((m) => ({ san: m.san, label: CC.moveLabel(m.fenBefore, m.color), color: m.color }));
   }
   const curFen = () => fenOf(RP.path);
   const turnOf = (fen) => fen.split(' ')[1];
@@ -143,9 +135,31 @@
     $$('#rep-color .seg-btn').forEach((b) => b.classList.toggle('active', b.dataset.v === RP.color));
     renderTab();
   }
+  /** Barre sous l'échiquier : navigation dans l'arbre, ou flèches ◀ ▶ pendant une révision */
+  function renderNav() {
+    const nav = $('#rep-nav');
+    const browse = RP.tab === 'build' || RP.tab === 'tree';
+    const drill = RP.tab === 'review' && RP.drill && RP.drill.cards[RP.drill.i];
+    nav.hidden = !browse && !drill;
+    if (drill) {
+      const d = RP.drill;
+      const c = d.cards[d.i];
+      const at = d.view == null ? c.path.length : d.view;
+      nav.innerHTML =
+        '<button class="btn btn-sm rv-arrow" data-nav="rv-back" title="Coup précédent (←)"' + (at > 0 ? '' : ' disabled') + '>◀</button>' +
+        '<button class="btn btn-sm rv-arrow" data-nav="rv-fwd" title="' + (d.view == null ? (d.state === 'ask' ? 'Montre-moi le coup (→)' : 'Coup suivant (→)') : 'Avancer (→)') + '">▶</button>' +
+        '<span class="rv-where">' + (d.view == null ? (d.state === 'done' ? 'Coup trouvé' : 'À toi de jouer') : 'Tu revois le coup ' + at + ' sur ' + c.path.length) + '</span>' +
+        '<button class="btn btn-sm" data-nav="flip" title="Retourner l’échiquier">⇅</button>';
+    } else if (browse && !nav.querySelector('[data-nav="start"]')) {
+      nav.innerHTML =
+        '<button class="btn btn-sm" data-nav="start" title="Début (↑)">⏮ Début</button>' +
+        '<button class="btn btn-sm" data-nav="back" title="Coup précédent (←)">◀ Retour</button>' +
+        '<button class="btn btn-sm" data-nav="flip" title="Retourner l’échiquier">⇅ Retourner</button>';
+    }
+  }
   function renderTab() {
     const browse = RP.tab === 'build' || RP.tab === 'tree';
-    $('#rep-nav').hidden = !browse;
+    renderNav();
     $('#rep-line').style.visibility = browse ? 'visible' : 'hidden';
     if (RP.tab === 'tree') renderTree(false);
     else if (RP.tab === 'build') renderBuild(false);
@@ -209,7 +223,7 @@
     html += '<div class="rep-cands" id="rep-cands"><p class="muted small"><span class="cc-spin">✻</span> Je cherche les coups possibles…</p></div>';
     setBody(
       html,
-      `<button class="btn btn-sm btn-primary" data-auto>✻ Créer depuis mes parties</button>${presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Répertoires conseillés</button>' : ''}${RP.undo && RP.undo.color === color ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : ''}`
+      `<button class="btn btn-sm btn-primary" data-auto>✻ Créer depuis mes parties</button>${presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Mes répertoires</button>' : ''}${RP.undo && (RP.undo.both || RP.undo.color === color) ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : ''}`
     );
     mood(mine && !rep ? 'thinking' : 'idle', 'bob');
     loadPositionData(fen, mine);
@@ -303,28 +317,27 @@
   /* =================== MON RÉPERTOIRE (vue façon Chessbook) =================== */
   /** Arbre du répertoire depuis une position : [{ uci, san, mine, kids }] ; kids === null = transposition */
   function subtree(color, fen, depth, seen, budget) {
+    // coups et positions filles en cache (R.step, R.childrenOf) : rapide même avec un gros répertoire
     const key = R.fenKey(fen);
     if (seen.has(key)) return null;
     seen.add(key);
     const out = [];
     if (depth <= 0 || budget.n <= 0) return out;
-    const ch = new Chess(fen);
-    if (ch.turn() === color) {
+    if (turnOf(fen) === color) {
       const e = R.get(color, fen);
       if (!e) return out;
-      const mv = ch.move(A.uciMove(e.uci));
-      if (!mv) return out;
+      const r = R.step(fen, e.uci);
+      if (!r) return out;
       budget.n--;
-      out.push({ uci: e.uci, san: mv.san, mine: true, kids: subtree(color, ch.fen(), depth - 1, seen, budget) });
+      out.push({ uci: e.uci, san: r.san, mine: true, kids: subtree(color, r.fen, depth - 1, seen, budget) });
       return out;
     }
-    for (const m of ch.moves({ verbose: true }).sort((a, b) => (a.piece === 'p' ? 0 : 1) - (b.piece === 'p' ? 0 : 1))) {
-      const c2 = new Chess(fen);
-      c2.move(m);
-      const f2 = c2.fen();
-      if (!R.get(color, f2)) continue;
+    const rep = R.data()[color];
+    for (const m of R.childrenOf(fen).filter((x) => rep[x.key]).sort(R.pawnFirst)) {
+      const r = R.step(fen, m.uci);
+      if (!r) continue;
       budget.n--;
-      out.push({ uci: uciOf(m), san: m.san, mine: false, f2 });
+      out.push({ uci: m.uci, san: r.san, mine: false, f2: r.fen });
     }
     for (const o of out) o.kids = subtree(color, o.f2, depth - 1, seen, budget);
     const size = (n) => (n.kids ? n.kids.reduce((t, k) => t + 1 + size(k), 0) : 0);
@@ -414,9 +427,23 @@
     return secHTML(nodes, path, path.length % 2 === 1, 0) + (budget.n <= 0 ? '<p class="muted small">… arbre coupé : avance dans une variante pour voir la suite.</p>' : '');
   }
 
+  /** Pièges de mat des packs de cette couleur qui passent par le chemin donné (tous si on est au départ) */
+  function trapsFor(color, path) {
+    const out = [];
+    for (const pre of CC.RepPresets || []) {
+      if (pre.color !== color) continue;
+      for (const t of pre.traps || []) {
+        const p = sanPath(t.line);
+        if (path.length && !(p.length > path.length && samePath(p.slice(0, path.length), path))) continue;
+        out.push(Object.assign({ path: p, pack: pre }, t));
+      }
+    }
+    return out;
+  }
+
   /** Lignes complètes du répertoire, regroupées par ouverture */
-  function openingGroups(color) {
-    const nodes = R.walk(color);
+  function openingGroups(color, walked) {
+    const nodes = walked || R.walk(color);
     const prefixes = nodes.map((nd) => nd.path.join(' '));
     const groups = new Map();
     for (const nd of nodes) {
@@ -432,15 +459,11 @@
   }
   /** Une ligne en texte (toucher la ligne lance sa révision) */
   function lineHTML(path) {
-    const ch = new Chess();
     let html = '';
-    path.forEach((u) => {
-      const fb = ch.fen();
-      const mv = ch.move(A.uciMove(u));
-      if (!mv) return;
-      if (mv.color === 'w') html += '<span class="tv-n">' + CC.moveLabel(fb, 'w') + '</span>';
+    for (const mv of R.line(path)) {
+      if (mv.color === 'w') html += '<span class="tv-n">' + CC.moveLabel(mv.fenBefore, 'w') + '</span>';
       html += '<span class="tv-s' + (mv.color === RP.color ? ' mine' : '') + '">' + CC.sanHTML(mv.san) + '</span>';
-    });
+    }
     return html;
   }
 
@@ -473,7 +496,7 @@
     const size = R.size(color);
     const fresh = Math.min(q.fresh.length, Math.max(0, R.newLeft()));
     const op = A.identifyOpening(sansOf(RP.path).map((m) => m.san)).opening;
-    const groups = size ? openingGroups(color) : [];
+    const groups = size ? openingGroups(color, q.cards) : [];
     let html = '';
     if (!size) {
       html += '<div class="tree-empty"><p><b>Ton répertoire ' + side(color) + ' est vide.</b></p><p class="muted">Ajoute le répertoire conseillé en un clic, crée-le depuis tes parties, ou joue tes coups dans « Construire ».</p></div>';
@@ -492,6 +515,22 @@
         html += replies.length
           ? '<div class="rep-mine"><span>Réponses adverses préparées :</span> ' + replies.map((m) => san(m.san)).join(' ') + '</div>'
           : '<div class="rep-mine muted">Aucune réponse adverse préparée ici.</div>';
+      }
+      // Les pièges de mat (gambits « début de partie ») qui passent par cette position : un toucher = révision
+      const traps = trapsFor(color, RP.path);
+      RP.traps = traps;
+      if (traps.length) {
+        html +=
+          '<details class="og traps"' + (RP.trapsClosed ? '' : ' open') + '><summary><span class="og-name">⚔️ Tes pièges de mat' + (RP.path.length ? ' depuis ici' : '') + '</span><span class="og-n">' + traps.length + '</span></summary><div class="trap-list">' +
+          traps
+            .map(
+              (x, i) =>
+                '<div class="trap" data-drill-trap="' + i + '" title="Réviser ce piège"><div class="trap-h"><span class="ol-play">▶</span><b>' + CC.esc(x.name) + '</b>' +
+                (/#$/.test(x.line) ? '<span class="tag good">mat</span>' : '') + (x.pack.extra ? '<span class="tag warn">gambit en plus</span>' : '') + '</div>' +
+                '<div class="trap-d">' + CC.esc(x.desc) + '</div><div class="trap-l">' + lineHTML(x.path) + '</div></div>'
+            )
+            .join('') +
+          '</div></details>';
       }
       const tree = treeSections(color, RP.path);
       html += '<h4 class="tree-h">' + (RP.path.length ? 'La suite dans ton répertoire' : 'Tout ton répertoire') + '</h4>';
@@ -512,8 +551,8 @@
       (size && RP.path.length ? '<button class="btn btn-sm btn-primary" data-drill-here>▶ Réviser cette ligne</button>' : '') +
         (size ? '<button class="btn btn-sm' + (RP.path.length ? '' : ' btn-primary') + '" data-start-review>' + (RP.path.length ? 'Tout réviser' : 'Réviser') + (todo ? ' (' + todo + ')' : '') + '</button>' : '') +
         '<button class="btn btn-sm" data-edit>✏️ Modifier ici</button>' +
-        (presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Répertoires conseillés</button>' : '') +
-        (RP.undo && RP.undo.color === color ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : '')
+        (presetFor(color) ? '<button class="btn btn-sm" data-preset>📘 Mes répertoires</button>' : '') +
+        (RP.undo && (RP.undo.both || RP.undo.color === color) ? '<button class="btn btn-sm" data-undo>Annuler le dernier changement</button>' : '')
     );
     mood(size ? 'happy' : 'meh', 'bob');
   }
@@ -747,18 +786,14 @@
     let missing = 0;
     const seen = new Set();
     for (const line of pre.lines) {
-      const ch = new Chess();
-      for (const sn of line.split(' ')) {
-        const fb = ch.fen();
-        const mv = ch.move(sn);
-        if (!mv) break;
+      for (const mv of R.line(line)) {
         if (mv.color !== pre.color) continue;
-        const k = R.fenKey(fb);
+        const k = R.fenKey(mv.fenBefore);
         if (seen.has(k)) continue;
         seen.add(k);
         const e = d[k];
         if (!e) missing++;
-        else if (e.uci === uciOf(mv)) same++;
+        else if (e.uci === mv.uci) same++;
         else diff++;
       }
     }
@@ -766,14 +801,14 @@
   }
   function renderPresets() {
     const list = presetsFor(RP.color);
-    let html = '<div class="rp-head"><b>Répertoires conseillés ' + side(RP.color) + '</b><button class="linkbtn" data-presets-close>Retour</button></div>';
-    html += '<p class="muted small">« Ajouter » complète ton répertoire sans toucher à tes coups. « Remplacer » met les coups du pack à la place des tiens là où ils diffèrent (tu peux annuler).</p>';
+    let html = '<div class="rp-head"><b>Répertoires ' + side(RP.color) + '</b><button class="linkbtn" data-presets-close>Retour</button></div>';
+    html += '<p class="muted small">Construits à partir de tes parties : tes ouvertures avec leurs pièges de mat, plus un gambit en plus. « Ajouter » complète ton répertoire sans toucher à tes coups ; « Remplacer » met les coups du pack à la place des tiens là où ils diffèrent (tu peux annuler).</p>';
     for (const pre of list) {
       const st = presetState(pre);
       const full = st.same === st.total;
-      html += '<div class="rp-card' + (pre.variant ? ' gambit' : '') + '"><div class="rp-title">' + (pre.variant ? '⚔️ ' : '📘 ') + CC.esc(pre.name) + '</div>' +
+      html += '<div class="rp-card' + (pre.variant || pre.extra ? ' gambit' : '') + '"><div class="rp-title">' + (pre.variant || pre.extra ? '⚔️ ' : '📘 ') + CC.esc(pre.name) + '</div>' +
         '<div class="rp-desc">' + CC.esc(pre.desc) + '</div>' +
-        '<div class="rp-meta">' + pre.lines.length + ' lignes · ' + st.total + ' coups à toi · ' +
+        '<div class="rp-meta">' + pre.lines.length + ' lignes · ' + (pre.traps ? pre.traps.length + ' pièges de mat · ' : '') + st.total + ' coups à toi · ' +
         (full ? '<b class="ok">déjà dans ton répertoire ✓</b>' : st.same + ' déjà identiques' + (st.diff ? ', <b>' + st.diff + ' différents des tiens</b>' : '') + (st.missing ? ', ' + st.missing + ' nouveaux' : '')) + '</div>' +
         '<div class="rp-btns">' +
         (st.missing && !full ? '<button class="btn btn-sm' + (pre.variant ? '' : ' btn-primary') + '" data-preset-add="' + pre.id + '">Ajouter</button>' : '') +
@@ -816,8 +851,12 @@
   function undo() {
     const u = RP.undo;
     if (!u) return;
-    R.restore(u.color, u.snap);
-    R.prune(u.color);
+    if (u.both) {
+      for (const c of ['w', 'b']) R.restore(c, u.both[c]);
+    } else {
+      R.restore(u.color, u.snap);
+      R.prune(u.color);
+    }
     R.save();
     RP.undo = null;
     RP.buildReport = null;
@@ -869,15 +908,14 @@
     const seen = new Set();
     const cards = [];
     for (const path of paths) {
-      const ch = new Chess();
       const sans = [];
-      for (let k = 0; k < path.length; k++) {
-        const fen = ch.fen();
-        const mv = ch.move(A.uciMove(path[k]));
-        if (!mv) break;
+      const moves = R.line(path);
+      for (let k = 0; k < moves.length; k++) {
+        const fen = moves[k].fenBefore;
+        const mv = moves[k];
         if (mv.color === color) {
           const key = R.fenKey(fen);
-          const uci = uciOf(mv);
+          const uci = mv.uci;
           const e = R.get(color, fen);
           const ck = e && e.uci === uci ? R.cardKey(color, key, uci) : null;
           if (!seen.has(key + '|' + uci)) {
@@ -911,16 +949,7 @@
     if (op) return op.name;
     return sans.slice(-4).map((m) => (m.color === 'w' ? m.label + ' ' : '') + m.san).join(' ') || 'Ligne';
   }
-  const sanPath = (line) => {
-    const ch = new Chess();
-    const p = [];
-    for (const sn of line.split(' ')) {
-      const mv = ch.move(sn);
-      if (!mv) break;
-      p.push(uciOf(mv));
-    }
-    return p;
-  };
+  const sanPath = (line) => R.line(line).map((m) => m.uci);
   function startLineReview(paths, title) {
     const cards = lineCards(paths);
     if (!cards.length) {
@@ -939,6 +968,8 @@
     if (!c) return finishReview();
     d.state = 'ask';
     d.pause = false;
+    d.view = null;
+    d.msg = null;
     whyToken++;
     board.setOrientation(RP.color);
     board.setArrows([]);
@@ -950,7 +981,7 @@
       show(fenOf(prev), false, prev[prev.length - 1]);
       board.setMovable(null);
       setTimeout(() => {
-        if (RP.drill !== d || d.cards[d.i] !== c) return;
+        if (RP.drill !== d || d.cards[d.i] !== c || d.view != null) return;
         show(c.fen, true, c.path[c.path.length - 1]);
         movable(c.fen, RP.color);
       }, 380);
@@ -964,21 +995,140 @@
   function renderCardPanel(extra) {
     const d = RP.drill;
     const c = d.cards[d.i];
-    const line = c.sans.length ? sansOf(c.path).map((m, k) => (m.color === 'w' || k === 0 ? `<span class="rl-num">${CC.esc(m.label)}</span>` : '') + CC.sanHTML(m.san)).join(' ') : 'Position de départ';
+    if (extra !== undefined) d.msg = extra || null;
+    const at = d.view == null ? c.path.length : d.view;
+    // la ligne jouée : chaque coup se touche pour y revenir (comme les flèches ◀ ▶)
+    const line = c.path.length
+      ? sansOf(c.path).map((m, k) => (m.color === 'w' || k === 0 ? `<span class="rl-num">${CC.esc(m.label)}</span>` : '') + `<button class="dl-m${k + 1 === at && d.view != null ? ' on' : ''}${m.color === RP.color ? ' mine' : ''}" data-dv="${k + 1}">${CC.sanHTML(m.san)}</button>`).join(' ')
+      : 'Position de départ';
     const op = A.identifyOpening(c.sans).opening;
+    const viewing = d.view != null;
+    const msg = viewing
+      ? (d.viewMsg ? d.viewMsg + ' ' : '') + `<b>Tu revois la ligne</b> (coup ${at} sur ${c.path.length}). ${turnOf(fenOf(c.path.slice(0, at))) === RP.color ? 'Rejoue ton coup, ou ' : ''}▶ pour avancer.`
+      : d.msg || `<b>À toi !</b> Quel est ton coup avec les ${side(RP.color)} ?`;
     setBody(
       `<div class="drill-prog"><span>${d.title ? `<b>${CC.esc(d.title)}</b> · ` : ''}Coup ${d.i + 1} / ${d.cards.length}</span><span class="muted">${d.ok} ✓ · ${d.ko} ✗</span></div>
       <div class="progress"><div class="progress-fill" style="width:${(d.i / d.cards.length) * 100}%"></div></div>
-      <div class="bubble drill-bubble">${extra || `<b>À toi !</b> Quel est ton coup avec les ${side(RP.color)} ?`}
+      <div class="bubble drill-bubble">${msg}
         <div class="drill-line">${line}</div>${op ? `<div class="muted small">${CC.esc(op.name)}</div>` : ''}</div>
       <div class="bubble why-box" id="why-box" hidden></div>`,
-      `${d.state === 'ask' ? '<button class="btn btn-sm" data-reveal>Je ne sais plus</button>' : '<button class="btn btn-sm" data-why>Pourquoi ce coup ?</button>'}${d.state === 'done' ? '<button class="btn btn-sm btn-primary" data-next-card>Continuer</button>' : ''}<button class="btn btn-sm btn-ghost" data-stop-review>Arrêter</button>`
+      `${viewing ? '<button class="btn btn-sm btn-primary" data-rv-live>Revenir au coup à trouver</button>' : d.state === 'ask' ? '<button class="btn btn-sm" data-reveal>Je ne sais plus</button>' : '<button class="btn btn-sm" data-why>Pourquoi ce coup ?</button>'}${!viewing && d.state === 'done' ? '<button class="btn btn-sm btn-primary" data-next-card>Continuer</button>' : ''}<button class="btn btn-sm btn-ghost" data-stop-review>Arrêter</button>`
     );
-    if (!extra) mood('thinking', 'bob');
+    renderNav();
+    if (!d.msg && !viewing) mood('thinking', 'bob');
+  }
+
+  /* ---------- Flèches ◀ ▶ : revoir les coups de la ligne pendant la révision ---------- */
+  /** Remet l'échiquier sur le coup à trouver (ou sur le coup trouvé) */
+  function liveBoard() {
+    const d = RP.drill;
+    const c = d.cards[d.i];
+    d.view = null;
+    if (d.navPause) {
+      d.navPause = false;
+      d.pause = false;
+    }
+    board.setBadge(null);
+    if (d.state === 'done') {
+      const ch = new Chess(c.fen);
+      ch.move(A.uciMove(c.move.uci));
+      show(ch.fen(), false, c.move.uci);
+      board.setArrows([]);
+      board.setMovable(null);
+    } else {
+      show(c.fen, false, c.path[c.path.length - 1]);
+      board.setArrows(d.state === 'fix' ? [{ from: c.move.uci.slice(0, 2), to: c.move.uci.slice(2, 4), color: GREEN }] : []);
+      movable(c.fen, RP.color);
+    }
+    renderCardPanel();
+  }
+  /** Montre la position après k coups de la ligne ; si c'était à toi de jouer, tu peux rejouer ton coup */
+  function viewPly(k, animate) {
+    const d = RP.drill;
+    const c = d.cards[d.i];
+    if (!c) return;
+    k = Math.max(0, Math.min(k, c.path.length));
+    d.viewMsg = null;
+    if (k === c.path.length) return liveBoard();
+    d.view = k;
+    d.pause = true; // pas de passage automatique au coup suivant pendant qu'on revoit la ligne
+    d.navPause = true;
+    const p = c.path.slice(0, k);
+    const fen = fenOf(p);
+    show(fen, !!animate, p[p.length - 1]);
+    board.setArrows([]);
+    board.setBadge(null);
+    if (turnOf(fen) === RP.color) movable(fen, RP.color);
+    else board.setMovable(null);
+    renderCardPanel();
+  }
+  function stepBack() {
+    const d = RP.drill;
+    if (!d || !d.cards[d.i]) return;
+    const at = d.view == null ? d.cards[d.i].path.length : d.view;
+    if (at > 0) viewPly(at - 1, false);
+  }
+  function stepForward() {
+    const d = RP.drill;
+    if (!d) return;
+    const c = d.cards[d.i];
+    if (!c) return;
+    if (d.view != null) {
+      const k = d.view + 1;
+      const mv = new Chess(fenOf(c.path.slice(0, d.view))).move(A.uciMove(c.path[d.view]));
+      if (mv) app.sound(mv);
+      if (k >= c.path.length) liveBoard();
+      else viewPly(k, true);
+      return;
+    }
+    if (d.state === 'ask') return reveal();
+    if (d.state === 'fix') return reviewMove(c.move.uci.slice(0, 2), c.move.uci.slice(2, 4), c.move.uci[4]);
+    d.i++;
+    showCard();
+  }
+  /** Coup joué sur une position passée de la ligne : on vérifie sans toucher à la répétition espacée */
+  function replayMove(from, to, promo) {
+    const d = RP.drill;
+    const c = d.cards[d.i];
+    const k = d.view;
+    const fen = fenOf(c.path.slice(0, k));
+    const mv = new Chess(fen).move({ from, to, promotion: promo || 'q' });
+    if (!mv) return;
+    const exp = c.path[k];
+    if (uciOf(mv) === exp) {
+      app.sound(mv);
+      viewPly(k + 1, true);
+      // la réponse adverse suit toute seule, comme pendant la révision
+      if (d.view != null && d.view < c.path.length && turnOf(fenOf(c.path.slice(0, d.view))) !== RP.color) {
+        setTimeout(() => {
+          if (RP.drill !== d || d.view !== k + 1) return;
+          const m2 = new Chess(fenOf(c.path.slice(0, k + 1))).move(A.uciMove(c.path[k + 1]));
+          if (m2) app.sound(m2);
+          viewPly(k + 2, true);
+        }, 450);
+      }
+    } else {
+      const good = new Chess(fen).move(A.uciMove(exp));
+      const x = new Chess(fen);
+      x.move({ from, to, promotion: promo || 'q' });
+      show(x.fen(), true, uciOf(mv));
+      board.setBadge({ sq: mv.to, cls: 'mistake' });
+      board.setMovable(null);
+      setTimeout(() => {
+        if (RP.drill !== d || d.view !== k) return;
+        show(fen, false, c.path[k - 1]);
+        board.setBadge(null);
+        board.setArrows([{ from: exp.slice(0, 2), to: exp.slice(2, 4), color: GREEN }]);
+        movable(fen, RP.color);
+        d.viewMsg = good ? `<span class="ko-txt">✗ Ici, ton coup était ${san(good.san)}.</span>` : null;
+        renderCardPanel();
+      }, 700);
+    }
   }
 
   function reviewMove(from, to, promo) {
     const d = RP.drill;
+    if (d.view != null) return replayMove(from, to, promo);
     const c = d.cards[d.i];
     const ch = new Chess(c.fen);
     const mv = ch.move({ from, to, promotion: promo || 'q' });
@@ -1012,7 +1162,7 @@
       mood('meh', 'shake');
       renderCardPanel(`<b class="ko-txt">✗ Pas celui-là.</b> Ton coup ici : ${san(c.move.san)}. Joue-le pour continuer.`);
       setTimeout(() => {
-        if (RP.drill !== d) return;
+        if (RP.drill !== d || d.view != null || d.cards[d.i] !== c) return;
         show(c.fen, false, c.path[c.path.length - 1]);
         board.setBadge(null);
         board.setArrows([{ from: c.move.uci.slice(0, 2), to: c.move.uci.slice(2, 4), color: GREEN }]);
@@ -1036,6 +1186,7 @@
   function finishReview() {
     const d = RP.drill;
     RP.drill = null;
+    renderNav();
     const next = R.nextDueText(RP.color);
     mood(d.ko ? 'happy' : 'star', 'jump');
     setBody(
@@ -1395,21 +1546,34 @@
   const UI = (CC.RepUI = {});
   UI.init = function (a) {
     app = a;
-    // Une seule fois : si le répertoire d'une couleur est vide, on y met le répertoire conseillé (annulable)
-    // (un drapeau par répertoire : un nouveau répertoire conseillé s'ajoute aussi chez ceux qui avaient déjà le premier)
-    for (const pre of CC.RepPresets || []) {
-      if (pre.variant) continue;
-      const flag = 'cc.preset.auto.' + pre.id;
-      const done = CC.store.get(flag, false) || (pre.id === 'black-e5-d5' && CC.store.get('cc.preset.auto', false));
-      if (done) continue;
-      CC.store.set(flag, true);
-      {
-        if (R.size(pre.color) > 0) continue;
-        const snap = R.snapshot(pre.color);
-        if (R.addPreset(pre).added) {
-          RP.undo = { color: pre.color, snap };
-          RP.presetNote = (RP.presetNote || []).concat(pre);
+    // Une seule fois (répertoire v2) : on retire ce que les anciens répertoires conseillés avaient ajouté
+    // et on met tes ouvertures + les pièges de mat + le gambit en plus de chaque couleur. Tes coups à toi
+    // (Construire, tes parties, le chat) sont gardés et passent avant les packs. Annulable.
+    if (!CC.store.get('cc.rep.v2', false)) {
+      CC.store.set('cc.rep.v2', true);
+      const d = R.data();
+      const snaps = { w: R.snapshot('w'), b: R.snapshot('b') };
+      let removed = 0;
+      for (const c of ['w', 'b']) {
+        for (const k of Object.keys(d[c])) {
+          if (d[c][k].src === 'conseillé' || d[c][k].src === 'gambit') {
+            delete d[c][k];
+            removed++;
+          }
         }
+      }
+      const added = [];
+      for (const pre of CC.RepPresets || []) {
+        if (pre.variant) continue;
+        if (R.addPreset(pre).added) added.push(pre);
+      }
+      R.prune('w');
+      R.prune('b');
+      R.save();
+      if (added.length || removed) {
+        RP.undo = { both: snaps };
+        RP.presetNote = added;
+        RP.migrated = removed > 0;
       }
     }
     board = new CC.Board($('#rep-board'), { orientation: RP.color });
@@ -1450,6 +1614,8 @@
     $('#rep-nav').addEventListener('click', (e) => {
       const b = e.target.closest('[data-nav]');
       if (!b) return;
+      if (b.dataset.nav === 'rv-back') return stepBack();
+      if (b.dataset.nav === 'rv-fwd') return stepForward();
       if (b.dataset.nav === 'start') goPath([], false);
       else if (b.dataset.nav === 'back') goPath(RP.path.slice(0, -1), true);
       else if (b.dataset.nav === 'flip') {
@@ -1592,6 +1758,15 @@
         RP.drill.i++;
         return showCard();
       }
+      const dv = t.closest('[data-dv]');
+      if (dv && RP.drill) return viewPly(+dv.dataset.dv, false);
+      if (t.closest('[data-rv-live]') && RP.drill) return liveBoard();
+      const tr = t.closest('[data-drill-trap]');
+      if (tr) {
+        const x = (RP.traps || [])[+tr.dataset.drillTrap];
+        if (x) startLineReview([sanPath(x.line)], x.name);
+        return;
+      }
       if (t.closest('[data-why-here]')) {
         const e2 = R.get(RP.color, curFen());
         if (e2) explainMove(RP.path, e2.uci);
@@ -1621,14 +1796,33 @@
         return renderTab();
       }
     });
+    // On se souvient si la liste des pièges est repliée
+    $('#view-rep').addEventListener(
+      'toggle',
+      (e) => {
+        if (e.target.matches && e.target.matches('details.traps')) RP.trapsClosed = !e.target.open;
+      },
+      true
+    );
     // Le bouton « Annuler » des notifications
     $('#toast').addEventListener('click', (e) => {
       if (e.target.closest('[data-undo]')) undo();
     });
     document.addEventListener('keydown', (e) => {
-      if ($('#view-rep').hidden || RP.tab !== 'build') return;
+      if ($('#view-rep').hidden) return;
       const tag = (e.target.tagName || '').toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (RP.tab === 'review' && RP.drill) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          stepBack();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          stepForward();
+        }
+        return;
+      }
+      if (RP.tab !== 'build' && RP.tab !== 'tree') return;
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         goPath(RP.path.slice(0, -1), true);
@@ -1639,14 +1833,23 @@
     });
   };
   UI.show = function () {
-    if (RP.presetNote && RP.presetNote.length) {
+    if (RP.presetNote) {
       const list = RP.presetNote;
       RP.presetNote = null;
-      RP.color = list[0].color;
+      if (list.length) RP.color = list[0].color;
       RP.path = [];
       RP.tab = 'tree';
-      const names = list.map((p) => '« ' + CC.esc(p.name) + ' »').join(' et ');
-      setTimeout(() => app.toast(`J’ai ajouté ${list.length > 1 ? 'les répertoires conseillés' : 'le répertoire conseillé'} ${names}. <button class="linkbtn" data-undo>Annuler</button>`), 300);
+      const extra = list.filter((p) => p.extra).map((p) => CC.esc(p.name.split(':').pop().trim()));
+      setTimeout(
+        () =>
+          app.toast(
+            (RP.migrated ? 'Répertoire refait : ' : 'Répertoire prêt : ') +
+              'tes ouvertures, les pièges de mat' +
+              (extra.length ? ' et en plus ' + extra.join(', ') : '') +
+              '. <button class="linkbtn" data-undo>Annuler</button>'
+          ),
+        300
+      );
     }
     renderTabs();
   };

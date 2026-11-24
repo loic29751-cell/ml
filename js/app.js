@@ -2203,17 +2203,15 @@
       'Voici l’analyse Stockfish de toutes mes parties (le rapport est dans ton contexte). Fais-moi un bilan complet et détaillé ; tu peux dépasser 200 mots, avec des listes :',
       '1. Mes 5 erreurs principales, chacune avec un ou deux exemples précis tirés du rapport (coup joué, meilleur coup, cadence) et ce que je dois changer concrètement.',
       '2. Ce qui change selon la cadence (bullet, 5 min, 10 min) : forces et faiblesses de chacune.',
-      '3. Des gambits adaptés à mon niveau, pour les Blancs et pour les Noirs : présente UNIQUEMENT ceux de la liste « gambits vérifiés » ci-dessous (lignes contrôlées par Stockfish, disponibles dans l’appli), avec les premiers coups, l’idée et le piège principal, sans inventer d’autres variantes. Regarde d’abord mon répertoire (get_repertoire pour les deux couleurs) pour dire lesquels j’ai déjà et lesquels seraient nouveaux. Explique comment les ajouter : onglet Répertoire › 📘 Répertoires conseillés. N’ajoute rien toi-même sans que je le demande.',
+      '3. Les pièges de mat de mon répertoire, pour les Blancs et pour les Noirs : présente UNIQUEMENT ceux de la liste « pièges vérifiés » ci-dessous (lignes contrôlées par Stockfish, déjà dans l’appli), avec les premiers coups, l’idée et le coup qui gagne, sans inventer d’autres variantes. Dis lesquels collent le mieux à mes parties. Rappelle où les réviser : onglet Répertoire › Mon répertoire › ⚔️ Tes pièges de mat (un toucher lance la révision). N’ajoute rien toi-même sans que je le demande.',
       '4. Un plan concret sur deux semaines pour passer de 650 à 750 en 10 minutes.',
     ].join('\n');
-    /** Les gambits vérifiés de l'appli, pour que le coach s'appuie sur des lignes contrôlées */
+    /** Les pièges de mat vérifiés de l'appli, pour que le coach s'appuie sur des lignes contrôlées */
     function gambitsText() {
-      const out = ['', 'Gambits vérifiés disponibles dans l’appli :'];
-      const W = [['Gambit Evans', 'e4 e5 Nf3 Nc6 Bc4 Bc5 b4 Bxb4 c3 Ba5 d4 exd4 O-O'], ['Attaque 4.Ng5 et Fegatello', 'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 Nxf7 Kxf7 Qf3+']];
-      out.push('- Blancs (répertoire « Blancs : 1.e4, Italienne et gambits ») : ' + W.map((x) => x[0] + ' (' + x[1] + ')').join(' ; ') + ' ; et contre 2…f6 : 3.Nxe5! fxe5 4.Qh5+.');
+      const out = ['', 'Pièges vérifiés de mon répertoire (dans l’appli) :'];
       for (const pre of CC.RepPresets || []) {
-        if (!pre.variant) continue;
-        out.push('- ' + pre.name + ' : ' + pre.desc + ' Lignes : ' + pre.lines.slice(0, 2).join(' | ') + (pre.id === 'black-gambits' ? ' | d4 d5 c4 e5 dxe5 d4 e3 Bb4+ Bd2 dxe3 Bxb4 exf2+ Ke2 fxg1=N+ (piège de Lasker)' : ''));
+        out.push('- ' + pre.name + ' — ' + pre.desc);
+        for (const t of pre.traps || []) out.push('  • ' + t.name + ' : ' + t.line + ' (' + t.desc + ')');
       }
       return out.join('\n');
     }
