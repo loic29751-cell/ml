@@ -1111,3 +1111,14 @@ select { background: var(--bg-deep); border: 1px solid var(--line); border-radiu
 /* La ligne jouée au-dessus de l’échiquier défile dans sa propre boîte : une longue ligne n’élargit plus la page (téléphone dézoomé) */
 .view-rep .board-col { max-width: 100%; min-width: 0; }
 .view-rep .rep-line { width: var(--bsize); max-width: calc(100vw - 50px); min-width: 0; }
+/* Gambits essentiels : les variantes, le meilleur cas d'abord */
+.ess-wrap { display: flex; flex-direction: column; gap: 4px; }
+.ess-open { align-self: flex-start; margin-left: 44px; font-size: 12.5px; }
+.ess-steps { display: flex; flex-direction: column; gap: 4px; margin-left: 22px; padding-left: 10px; border-left: 2px solid rgba(217, 119, 87, 0.45); }
+.ess-step { display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 8px; padding: 7px 9px; background: rgba(255, 255, 255, 0.03); }
+.ess-step:hover { background: rgba(217, 119, 87, 0.12); }
+.ess-step.first { background: rgba(217, 119, 87, 0.16); }
+.ess-step.mate .ess-st b::after { content: ' ♚'; color: var(--accent); }
+.ess-st { flex: 1; min-width: 0; }
+.ess-st b { font-size: 13px; }
+.ess-sm { font-size: 12px; color: var(--text-3); line-height: 1.4; margin-top: 1px; word-break: break-word; }

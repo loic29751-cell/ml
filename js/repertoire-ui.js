@@ -472,6 +472,30 @@
     const fresh = q.fresh.filter(keep).sort((a, b) => fs2.get(a.ck) - fs2.get(b.ck));
     return { cards: q.cards.filter(keep), due: q.due.filter(keep), fresh, focus: true };
   }
+  /** Étapes d'un gambit : le meilleur cas d'abord, puis « Si … » pour chaque réaction adverse (nommées dans les presets, sinon devinées) */
+  function essSteps(e) {
+    if (e.steps) return e.steps;
+    const first = R.line(e.lines[0]);
+    return e.lines.map((l, j) => {
+      if (!j) return { t: /#$/.test(l) ? 'Le meilleur cas' : 'La ligne principale', l };
+      const mv = R.line(l);
+      let k = mv.findIndex((m, x) => !first[x] || first[x].uci !== m.uci);
+      if (k < 0) k = mv.length - 1;
+      return { t: 'Si ' + (Math.floor(k / 2) + 1) + (k % 2 ? '…' : '.') + mv[k].san, l };
+    });
+  }
+  function essStepsHTML(e, i) {
+    const st = essSteps(e);
+    const lines = st.map((s) => R.line(s.l));
+    let pre = 0; // début commun de toutes les lignes : on ne montre que la suite
+    while (lines.every((m) => m[pre] && m[pre].uci === lines[0][pre].uci)) pre++;
+    pre = Math.max(0, pre - 1);
+    return '<div class="ess-steps">' + st.map((s, j) => {
+      const mv = lines[j];
+      const txt = mv.slice(pre).map((m, x) => { const k = pre + x; return (k % 2 === 0 ? (k / 2 + 1) + '.' : x === 0 ? Math.ceil(k / 2) + '…' : '') + m.san; }).join(' ');
+      return '<div class="ess-step' + (j === 0 ? ' first' : '') + (/#$/.test(s.l) ? ' mate' : '') + '" data-ess-step="' + i + ':' + j + '"><div class="ess-st"><b>' + CC.esc(s.t) + '</b><div class="ess-sm">' + CC.esc(txt) + '</div></div><span class="ol-play">▶</span></div>';
+    }).join('') + '</div>';
+  }
   function essentialsHTML(color) {
     const list = essentials(color);
     if (!list.length) return '';
@@ -479,9 +503,14 @@
       .map((e, i) => {
         const cards = lineCards(e.lines.map(sanPath));
         const known = cards.filter((c) => c.srs && c.srs.box >= 2).length;
+        const open = RP.essOpen && RP.essOpen.has(color + i);
         return (
+          '<div class="ess-wrap">' +
           '<div class="ess" data-ess="' + i + '" title="Réviser ce gambit"><span class="ess-n">' + (i + 1) + '</span><div class="ess-main"><b>' + CC.esc(e.name) + '</b>' + (e.best ? ' <span class="ess-best">⭐ le mieux adapté</span>' : '') + '<div class="ess-why">' + CC.esc(e.why) + '</div></div>' +
-          '<span class="ess-prog' + (known === cards.length && cards.length ? ' done' : '') + '" title="coups sus / coups à savoir">' + known + '/' + cards.length + '</span><span class="ol-play">▶</span></div>'
+          '<span class="ess-prog' + (known === cards.length && cards.length ? ' done' : '') + '" title="coups sus / coups à savoir">' + known + '/' + cards.length + '</span><span class="ol-play">▶</span></div>' +
+          '<button class="ess-open linkbtn" data-ess-open="' + i + '">' + (open ? '▴ Cacher' : '▾ Voir') + ' les ' + e.lines.length + ' variantes</button>' +
+          (open ? essStepsHTML(e, i) : '') +
+          '</div>'
         );
       })
       .join('');
@@ -1769,9 +1798,10 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
     // et on met tes ouvertures + les pièges de mat + le gambit en plus de chaque couleur. Tes coups à toi
     // (Construire, tes parties, le chat) sont gardés et passent avant les packs. Annulable.
     // Version des packs : à chaque nouvelle version, les coups venant des packs sont refaits (tes coups à toi restent).
-    // v3 : sans le coup du berger contre 1…g6 ni les « mat du lion ».
-    const REP_VER = 3;
+    // v3 : sans le coup du berger contre 1…g6 ni les « mat du lion ». v4 : Stafford complété (toutes les réactions adverses).
+    const REP_VER = 4;
     const firstTime = !CC.store.get('cc.rep.v2', false);
+    const prevVer = CC.store.get('cc.rep.ver', 2);
     if (firstTime || CC.store.get('cc.rep.ver', 2) < REP_VER) {
       CC.store.set('cc.rep.v2', true);
       CC.store.set('cc.rep.ver', REP_VER);
@@ -1799,7 +1829,7 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
         if (firstTime) {
           RP.presetNote = added;
           RP.migrated = removed > 0;
-        } else RP.updateNote = 'Répertoire mis à jour : coup du berger contre 1…g6 et « mat du lion » retirés (contre 1…g6, c’est maintenant 3.d4).';
+        } else RP.updateNote = 'Répertoire mis à jour : ' + (prevVer < 3 ? 'coup du berger contre 1…g6 et « mat du lion » retirés (contre 1…g6, c’est maintenant 3.d4) ; ' : '') + 'gambit Stafford complété, avec une réponse à chaque réaction adverse.';
       }
     }
     board = new CC.Board($('#rep-board'), { orientation: RP.color });
@@ -1988,6 +2018,23 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
       if (t.closest('[data-next-card]') && RP.drill) {
         RP.drill.i++;
         return showCard();
+      }
+      const eo = t.closest('[data-ess-open]');
+      if (eo) {
+        e.preventDefault();
+        RP.essOpen = RP.essOpen || new Set();
+        const k = RP.color + eo.dataset.essOpen;
+        if (RP.essOpen.has(k)) RP.essOpen.delete(k);
+        else RP.essOpen.add(k);
+        return renderTab();
+      }
+      const ep = t.closest('[data-ess-step]');
+      if (ep) {
+        const [gi, sj] = ep.dataset.essStep.split(':').map(Number);
+        const x = essentials(RP.color)[gi];
+        const s = x && essSteps(x)[sj];
+        if (s) startLineReview([sanPath(s.l)], '🎯 ' + x.name + ' : ' + s.t, 150);
+        return;
       }
       const es = t.closest('[data-ess]');
       if (es) {
