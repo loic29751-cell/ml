@@ -1236,7 +1236,7 @@ var Chess = function(fen) {
   }
 
   return {
-    /* Ajout Clawd Coach : positions filles sans calcul de la notation SAN (bien plus rapide pour parcourir
+    /* Ajout Claude Coach : positions filles sans calcul de la notation SAN (bien plus rapide pour parcourir
      * un arbre d'ouvertures) : [{ from, to, promotion, fen }] pour chaque coup légal */
     child_fens: function() {
       var ugly = generate_moves({ legal: true })

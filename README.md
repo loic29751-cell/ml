@@ -1,4 +1,4 @@
-# ✻ Clawd Coach
+# ✻ Claude Coach
 
 Bilan de tes parties **chess.com**, façon « Game Review » : Stockfish analyse chaque coup dans ton navigateur et **Clawd** (la mascotte de Claude Code) t'explique tes bons et mauvais coups.
 

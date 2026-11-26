@@ -1,4 +1,4 @@
-/* Clawd Coach — utilitaires partagés (window.CC) */
+/* Claude Coach — utilitaires partagés (window.CC) */
 (function (root) {
   'use strict';
   const CC = (root.CC = root.CC || {});

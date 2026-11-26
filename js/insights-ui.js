@@ -1,4 +1,4 @@
-/* Clawd Coach — page « Mes faiblesses » : analyse en lot d'une période, rapport, graphiques, entraînement */
+/* Claude Coach — page « Mes faiblesses » : analyse en lot d'une période, rapport, graphiques, entraînement */
 (function (root) {
   'use strict';
   const CC = root.CC;

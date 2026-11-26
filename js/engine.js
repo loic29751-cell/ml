@@ -1,4 +1,4 @@
-/* Clawd Coach — Stockfish (asm.js) dans un Web Worker.
+/* Claude Coach — Stockfish (asm.js) dans un Web Worker.
  * Le moteur est chargé depuis js/vendor/stockfish-src.js (fonctionne même en file://),
  * avec repli sur le CDN cdnjs si besoin. */
 (function (root) {

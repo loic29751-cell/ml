@@ -1,4 +1,4 @@
-/* Clawd Coach — moteur d'IA du coach : Claude (Anthropic) ou Gemini (Google), au choix dans les réglages */
+/* Claude Coach — moteur d'IA du coach : Claude (Anthropic) ou Gemini (Google), au choix dans les réglages */
 (function (root) {
   'use strict';
   const CC = root.CC;

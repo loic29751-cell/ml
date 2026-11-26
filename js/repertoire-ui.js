@@ -1,4 +1,4 @@
-/* Clawd Coach — onglet « Répertoire » : construire ses ouvertures, les réviser (répétition espacée),
+/* Claude Coach — onglet « Répertoire » : construire ses ouvertures, les réviser (répétition espacée),
  * exercices tirés de ses propres erreurs (avec partie libre contre Stockfish ensuite), écarts dans ses parties. */
 (function (root) {
   'use strict';

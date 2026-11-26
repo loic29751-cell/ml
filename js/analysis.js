@@ -1,4 +1,4 @@
-/* Clawd Coach — PGN, ouvertures, analyse Stockfish et classification des coups (façon « Bilan de partie »).
+/* Claude Coach — PGN, ouvertures, analyse Stockfish et classification des coups (façon « Bilan de partie »).
  * Modèle : chances de gain (courbe lichess) -> points espérés perdus -> catégorie.
  * Seuils : Meilleur 0 · Excellent ≤ 2 % · Bon ≤ 5 % · Imprécision ≤ 10 % · Erreur ≤ 20 % · Gaffe > 20 %. */
 (function (root) {

@@ -1,4 +1,4 @@
-/* Clawd Coach — les commentaires du coach (français, tutoiement).
+/* Claude Coach — les commentaires du coach (français, tutoiement).
  * Tout est déduit des données Stockfish + quelques détecteurs de motifs (pièce en prise, fourchette, mat…). */
 (function (root) {
   'use strict';

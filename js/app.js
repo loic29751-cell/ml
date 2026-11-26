@@ -1,4 +1,4 @@
-/* Clawd Coach — application (vues, navigation, bilan, réessai, variantes, réglages) */
+/* Claude Coach — application (vues, navigation, bilan, réessai, variantes, réglages) */
 (function () {
   'use strict';
   const CC = window.CC;
@@ -438,7 +438,7 @@
     const ours = idx && idx.acc ? (meWhite ? idx.acc.w : idx.acc.b) : null;
     const theirs = g.accuracies ? (meWhite ? g.accuracies.white : g.accuracies.black) : null;
     let acc = '—';
-    if (ours != null) acc = `<span class="acc-ours" title="Précision calculée par Clawd Coach">✻ ${ours.toFixed(1)}</span>`;
+    if (ours != null) acc = `<span class="acc-ours" title="Précision calculée par Claude Coach">✻ ${ours.toFixed(1)}</span>`;
     else if (theirs != null) acc = theirs.toFixed(1);
     const variant = g.rules && g.rules !== 'chess';
     const pl = (p, c) =>

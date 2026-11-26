@@ -1,4 +1,4 @@
-/* Clawd Coach — puzzles : puzzles lichess (base publique, sans compte) choisis selon tes faiblesses,
+/* Claude Coach — puzzles : puzzles lichess (base publique, sans compte) choisis selon tes faiblesses,
  * plus tes propres erreurs en exercices. Progression et niveau gardés dans ce navigateur. */
 (function (root) {
   'use strict';

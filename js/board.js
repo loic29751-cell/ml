@@ -1,4 +1,4 @@
-/* Clawd Coach — échiquier (rendu DOM, animations, flèches, badges, clic & glisser-déposer) */
+/* Claude Coach — échiquier (rendu DOM, animations, flèches, badges, clic & glisser-déposer) */
 (function (root) {
   'use strict';
   const CC = root.CC;

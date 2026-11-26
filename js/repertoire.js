@@ -1,4 +1,4 @@
-/* Clawd Coach — répertoire d'ouvertures : un coup par position (transpositions comprises),
+/* Claude Coach — répertoire d'ouvertures : un coup par position (transpositions comprises),
  * révision espacée (boîtes de Leitner), statistiques et écarts tirés de tes parties. */
 (function (root) {
   'use strict';

@@ -1,4 +1,4 @@
-/* Clawd Coach — répertoires tout prêts, construits à partir des parties de Theking7252 (279 parties chess.com) :
+/* Claude Coach — répertoires tout prêts, construits à partir des parties de Theking7252 (279 parties chess.com) :
  * ses ouvertures habituelles (1.e4 + Italienne avec Bc4/Ng5 ; 1…e5 et …Nc6 contre tout, gambit Englund contre 1.d4),
  * enrichies de pièges de mat « début de partie », plus un gambit en plus par couleur (Tennison, Stafford).
  * Toutes les lignes sont vérifiées par Stockfish ; les pièges finissent par un mat ou un gros gain de matériel. */

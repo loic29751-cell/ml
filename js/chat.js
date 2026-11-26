@@ -1,4 +1,4 @@
-/* Clawd Coach — chat privé avec Clawd (Claude), nourri par le rapport « Mes faiblesses ».
+/* Claude Coach — chat privé avec Clawd (Claude), nourri par le rapport « Mes faiblesses ».
  * La conversation reste dans ce navigateur (localStorage) ; les messages partent seulement vers api.anthropic.com. */
 (function (root) {
   'use strict';

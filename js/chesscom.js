@@ -1,4 +1,4 @@
-/* Clawd Coach — API publique de chess.com (lecture seule, sans compte).
+/* Claude Coach — API publique de chess.com (lecture seule, sans compte).
  * Doc : https://www.chess.com/news/view/published-data-api */
 (function (root) {
   'use strict';

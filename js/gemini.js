@@ -1,4 +1,4 @@
-/* Clawd Coach — coach IA avec Gemini (API Google AI Studio), appelé directement depuis le navigateur.
+/* Claude Coach — coach IA avec Gemini (API Google AI Studio), appelé directement depuis le navigateur.
  * La clé reste dans ce navigateur (localStorage) et n'est envoyée qu'à generativelanguage.googleapis.com. */
 (function (root) {
   'use strict';

@@ -1,4 +1,4 @@
-/* Clawd Coach — « Mes faiblesses » : faits extraits de chaque partie analysée,
+/* Claude Coach — « Mes faiblesses » : faits extraits de chaque partie analysée,
  * agrégation sur une période, faiblesses principales et rapport texte pour Claude. */
 (function (root) {
   'use strict';

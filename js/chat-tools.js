@@ -1,4 +1,4 @@
-/* Clawd Coach — outils que l'IA du chat peut utiliser pour gérer le répertoire d'ouvertures.
+/* Claude Coach — outils que l'IA du chat peut utiliser pour gérer le répertoire d'ouvertures.
  * Chaque appel est validé ici (couleur, coups légaux, conflits) avant de toucher au répertoire. */
 (function (root) {
   'use strict';

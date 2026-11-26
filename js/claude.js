@@ -1,4 +1,4 @@
-/* Clawd Coach — explications optionnelles par Claude (SDK officiel @anthropic-ai/sdk, chargé à la demande).
+/* Claude Coach — explications optionnelles par Claude (SDK officiel @anthropic-ai/sdk, chargé à la demande).
  * La clé API reste dans le navigateur (localStorage) et n'est envoyée qu'à api.anthropic.com. */
 (function (root) {
   'use strict';
