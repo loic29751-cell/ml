@@ -1146,12 +1146,15 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
   /* ---------- Révision d'une ligne précise (comme « Practice » dans Chessbook) ---------- */
   /** Cartes le long de lignes (chemins uci depuis le départ) : à chaque coup du joueur, le coup attendu est celui de la ligne.
    *  Si ce coup est aussi celui du répertoire, la réponse compte pour la répétition espacée. */
-  function lineCards(paths) {
+  /** full : chaque ligne repart du début (les coups déjà vus dans une ligne précédente reviennent, sans compter deux fois) */
+  function lineCards(paths, full) {
     const color = RP.color;
     const srs = R.data().srs;
     const seen = new Set();
     const cards = [];
+    let li = -1;
     for (const path of paths) {
+      li++;
       const sans = [];
       const moves = R.line(path);
       for (let k = 0; k < moves.length; k++) {
@@ -1162,9 +1165,10 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
           const uci = mv.uci;
           const e = R.get(color, fen);
           const ck = e && e.uci === uci ? R.cardKey(color, key, uci) : null;
-          if (!seen.has(key + '|' + uci)) {
+          const again = seen.has(key + '|' + uci);
+          if (!again || full) {
             seen.add(key + '|' + uci);
-            cards.push({ fen, key, path: path.slice(0, k), sans: sans.slice(), move: { uci, san: mv.san }, ck, srs: ck ? srs[ck] || null : null });
+            cards.push({ fen, key, path: path.slice(0, k), sans: sans.slice(), move: { uci, san: mv.san }, ck, srs: ck ? srs[ck] || null : null, again, ln: li });
           }
         }
         sans.push(mv.san);
@@ -1195,12 +1199,19 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
   }
   const sanPath = (line) => R.line(line).map((m) => m.uci);
   function startLineReview(paths, title, max) {
-    const cards = lineCards(paths);
+    const cards = lineCards(paths, true);
     if (!cards.length) {
       app.toast('Aucun coup à toi dans cette ligne.');
       return;
     }
-    RP.drill = { cards: cards.slice(0, max || 60), i: 0, ok: 0, ko: 0, state: 'ask', title, src: { paths, title } };
+    // trop long : on coupe à la fin d'une ligne, jamais au milieu
+    let cut = cards.length;
+    if (cut > (max || 200)) {
+      cut = max || 200;
+      while (cut > 0 && cards[cut] && cards[cut].ln === cards[cut - 1].ln) cut--;
+      if (!cut) cut = cards.findIndex((c) => c.ln !== cards[0].ln) > 0 ? cards.findIndex((c) => c.ln !== cards[0].ln) : cards.length;
+    }
+    RP.drill = { cards: cards.slice(0, cut), i: 0, ok: 0, ko: 0, state: 'ask', title, src: { paths, title } };
     RP.lastDrillSrc = RP.drill.src;
     RP.tab = 'review';
     renderTabs();
@@ -1383,7 +1394,7 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
     if (uciOf(mv) === c.move.uci) {
       const first = d.state === 'ask';
       if (first) {
-        if (c.ck) R.grade(c.ck, true);
+        if (c.ck && !c.again) R.grade(c.ck, true);
         d.ok++;
       }
       d.state = 'done';
@@ -1398,7 +1409,7 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
       }, 1200);
     } else {
       if (d.state === 'ask') {
-        if (c.ck) R.grade(c.ck, false);
+        if (c.ck && !c.again) R.grade(c.ck, false);
         d.ko++;
       }
       d.state = 'fix';
@@ -1419,7 +1430,7 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
     const d = RP.drill;
     const c = d.cards[d.i];
     if (d.state === 'ask') {
-      if (c.ck) R.grade(c.ck, false);
+      if (c.ck && !c.again) R.grade(c.ck, false);
       d.ko++;
     }
     d.state = 'fix';
@@ -2033,19 +2044,19 @@ ${q.focus ? '<p class="rep-help"><b>🎯 Mode essentiel</b> : seulement tes 5 ga
         const [gi, sj] = ep.dataset.essStep.split(':').map(Number);
         const x = essentials(RP.color)[gi];
         const s = x && essSteps(x)[sj];
-        if (s) startLineReview([sanPath(s.l)], '🎯 ' + x.name + ' : ' + s.t, 150);
+        if (s) startLineReview([sanPath(s.l)], '🎯 ' + x.name + ' : ' + s.t, 400);
         return;
       }
       const es = t.closest('[data-ess]');
       if (es) {
         const x = essentials(RP.color)[+es.dataset.ess];
-        if (x) startLineReview(x.lines.map(sanPath), '🎯 ' + x.name, 150);
+        if (x) startLineReview(x.lines.map(sanPath), '🎯 ' + x.name, 400);
         return;
       }
       if (t.closest('[data-ess-all]')) {
         e.preventDefault();
         const paths = essentials(RP.color).flatMap((x) => x.lines.map(sanPath));
-        if (paths.length) startLineReview(paths, '🎯 Mes 5 gambits', 150);
+        if (paths.length) startLineReview(paths, '🎯 Mes 5 gambits', 400);
         return;
       }
       if (t.closest('[data-focus-off]') || t.closest('[data-focus-on]')) {
